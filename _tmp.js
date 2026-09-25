@@ -1,0 +1,560 @@
+
+/* ═══════════════════════════════════════════════
+   LOAD CASE
+═══════════════════════════════════════════════ */
+const caseRaw = localStorage.getItem('lifeline_em_case');
+const em = caseRaw ? JSON.parse(caseRaw) : { desc:'Emergency on NH-44 bypass', lat:18.3312, lng:78.3445 };
+const victimLat = parseFloat(em.lat);
+const victimLng = parseFloat(em.lng);
+const AMB_BASE  = [18.317987, 78.334956];
+
+document.getElementById('amb-desc').innerText = em.desc || 'Emergency incident';
+
+const HOSPITALS = [
+  { id:'H1', name:'Government Area Hospital, Kamareddy', lat:18.3280, lng:78.3310, icuBeds:6,  traumaOT:'READY', recommended:true  },
+  { id:'H2', name:'Lifeline Superspeciality Hospital',   lat:18.3360, lng:78.3510, icuBeds:12, traumaOT:'READY', recommended:false }
+];
+
+/* ═══════════════════════════════════════════════
+   MAP
+═══════════════════════════════════════════════ */
+const aMap = L.map('amb-map', { zoomControl:false }).setView([AMB_BASE[0], AMB_BASE[1]], 14);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(aMap);
+
+const victimIcon = L.divIcon({
+  html:`<div style="background:#ef4444;width:32px;height:32px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px #ef4444;font-size:16px;">📍</div>`,
+  className:'', iconSize:[32,32], iconAnchor:[16,16]
+});
+const ambIcon = L.divIcon({
+  html:`<div style="background:#10b981;width:36px;height:36px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 0 18px #10b981;">🚑</div>`,
+  className:'', iconSize:[36,36], iconAnchor:[18,18]
+});
+
+L.marker([victimLat,victimLng],{icon:victimIcon}).addTo(aMap).bindPopup('Accident Scene').openPopup();
+const ambMarker = L.marker(AMB_BASE,{icon:ambIcon,zIndexOffset:1000}).addTo(aMap);
+
+/* ═══════════════════════════════════════════════
+   BROADCAST CHANNEL — sends to victim.html
+═══════════════════════════════════════════════ */
+const BC = new BroadcastChannel('lifeline_em');
+
+// Also listen for victim's extra description
+BC.onmessage = e => {
+  if (e.data.type === 'EXTRA_DESC') {
+    document.getElementById('victim-extra-panel').style.display = 'block';
+    document.getElementById('victim-extra-text').innerText = e.data.val;
+  }
+};
+window.addEventListener('storage', e => {
+  if (e.key === 'lifeline_em_msg' && e.newValue) {
+    try {
+      const msg = JSON.parse(e.newValue);
+      if (msg.type === 'EXTRA_DESC') {
+        document.getElementById('victim-extra-panel').style.display = 'block';
+        document.getElementById('victim-extra-text').innerText = msg.val;
+      }
+    } catch(_) {}
+  }
+});
+
+function broadcast(msg) {
+  BC.postMessage(msg);
+  // localStorage fallback for cross-tab (different windows)
+  localStorage.setItem('lifeline_em_msg', JSON.stringify({ ...msg, _ts: Date.now() }));
+}
+
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+let scenePaths = [null, null];
+let hospPaths  = {};
+let selectedSceneRoute = 0;
+let selectedHospRoute  = 0;
+let selectedHospId     = null;
+let isJourneyActive    = false;
+let journeyTimer       = null;
+let tlMarkers          = [];
+let sceneLines         = [];
+let hospLines          = [];
+
+/* ═══════════════════════════════════════════════
+   OSRM
+═══════════════════════════════════════════════ */
+async function osrmFetch(from, to, via) {
+  const pts = via ? `${from};${via};${to}` : `${from};${to}`;
+  const r   = await fetch(`https://router.project-osrm.org/route/v1/driving/${pts}?overview=full&geometries=geojson`);
+  const d   = await r.json();
+  const rt  = d.routes[0];
+  return {
+    coords: rt.geometry.coordinates.map(c=>[c[1],c[0]]),
+    dist: rt.distance,
+    dur:  rt.duration
+  };
+}
+
+function linspace(a, b, n) {
+  return Array.from({length:n+1},(_,i)=>[a[0]+(b[0]-a[0])*i/n, a[1]+(b[1]-a[1])*i/n]);
+}
+
+/* ═══════════════════════════════════════════════
+   RANDOM SIGNALS
+═══════════════════════════════════════════════ */
+const SIG_NAMES = ['Market Junction','NH-44 Cross','Bus Stand Signal','Town Hall Rd',
+  'Old Bridge Cross','Grain Market','Police Station Rd','Collector Office Rd','Bypass Entry','Subash Rd'];
+
+function randomSignals(path, count) {
+  const n = path.length;
+  const startI = Math.floor(n*0.10), endI = Math.floor(n*0.90);
+  const pool = [];
+  for(let i=startI; i<=endI; i++) pool.push(i);
+  for(let i=pool.length-1; i>0; i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [pool[i],pool[j]]=[pool[j],pool[i]];
+  }
+  return pool.slice(0,Math.min(count,pool.length)).sort((a,b)=>a-b).map((idx,i)=>({
+    id:`TL_${idx}`, name:SIG_NAMES[i%SIG_NAMES.length],
+    lat:path[idx][0], lng:path[idx][1], pathIdx:idx, state:'red'
+  }));
+}
+
+/* ═══════════════════════════════════════════════
+   TRAFFIC LIGHT ICONS
+═══════════════════════════════════════════════ */
+function makeTLIcon(state) {
+  const r = state==='red'   ? '#ef4444' : 'rgba(239,68,68,.12)';
+  const a = state==='amber' ? '#f59e0b' : 'rgba(245,158,11,.12)';
+  const g = state==='green' ? '#10b981' : 'rgba(16,185,129,.12)';
+  const glow = state==='green'?'0 0 12px #10b981':state==='red'?'0 0 8px #ef4444':'none';
+  return L.divIcon({
+    html:`<div style="background:#040a14;border:1px solid ${state==='green'?'#10b981':state==='red'?'#ef4444':'#334155'};
+      border-radius:8px;padding:3px 5px;display:flex;flex-direction:column;gap:3px;
+      align-items:center;box-shadow:${glow};">
+      <div style="width:10px;height:10px;border-radius:50%;background:${r};"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${a};"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${g};box-shadow:${state==='green'?'0 0 8px #10b981':'none'};"></div>
+    </div>`,
+    className:'', iconSize:[20,40], iconAnchor:[10,20]
+  });
+}
+
+function drawTLMarkers(sigs) {
+  clearTL();
+  sigs.forEach(sig => {
+    const m = L.marker([sig.lat,sig.lng],{icon:makeTLIcon(sig.state),zIndexOffset:500}).addTo(aMap);
+    m.bindPopup(`<b>${sig.name}</b><br>${sig.state.toUpperCase()}`);
+    tlMarkers.push({lMarker:m, data:sig});
+  });
+}
+function clearTL() {
+  tlMarkers.forEach(t=>aMap.removeLayer(t.lMarker));
+  tlMarkers=[];
+}
+
+/* ═══════════════════════════════════════════════
+   LOAD SCENE ROUTES ON BOOT
+═══════════════════════════════════════════════ */
+async function loadSceneRoutes() {
+  try {
+    const from = `${AMB_BASE[1]},${AMB_BASE[0]}`;
+    const to   = `${victimLng},${victimLat}`;
+    const [r1,r2] = await Promise.all([
+      osrmFetch(from,to),
+      osrmFetch(from,to,'78.3310,18.3240')
+    ]);
+    scenePaths[0]=r1.coords; scenePaths[1]=r2.coords;
+
+    const s0=3+Math.floor(Math.random()*2), s1=4+Math.floor(Math.random()*2);
+    document.getElementById('r0-time').innerText=fDur(r1.dur);
+    document.getElementById('r0-dist').innerText=fDist(r1.dist);
+    document.getElementById('r0-sigs').innerText=s0;
+    document.getElementById('r1-time').innerText=fDur(r2.dur);
+    document.getElementById('r1-dist').innerText=fDist(r2.dist);
+    document.getElementById('r1-sigs').innerText=s1;
+
+    drawSceneRoutes();
+  } catch(e) {
+    console.warn('OSRM failed',e);
+    const fb=linspace(AMB_BASE,[victimLat,victimLng],50);
+    scenePaths[0]=scenePaths[1]=fb;
+    drawSceneRoutes();
+  }
+}
+
+function drawSceneRoutes() {
+  sceneLines.forEach(l=>{ try{aMap.removeLayer(l);}catch(e){} });
+  sceneLines=[]; clearTL();
+  if(!scenePaths[0]) return;
+
+  [0,1].forEach(i=>{
+    const isSel=i===selectedSceneRoute;
+    const c=i===0?'#10b981':'#f59e0b';
+    const l=L.polyline(scenePaths[i],{color:c,weight:isSel?6:3,opacity:isSel?.9:.35,dashArray:isSel?null:'7,6'}).addTo(aMap);
+    sceneLines.push(l);
+  });
+
+  const sigCount=selectedSceneRoute===0?3:4;
+  drawTLMarkers(randomSignals(scenePaths[selectedSceneRoute],sigCount));
+
+  // Broadcast selected route coords to victim
+  broadcast({ type:'ROUTE_SELECTED', coords:scenePaths[selectedSceneRoute] });
+
+  const bounds=L.latLngBounds(scenePaths[selectedSceneRoute]);
+  aMap.fitBounds(bounds,{padding:[44,44]});
+}
+
+function selectSceneRoute(idx) {
+  if(isJourneyActive) return;
+  selectedSceneRoute=idx;
+  document.getElementById('rc-0').classList.toggle('active',idx===0);
+  document.getElementById('rc-1').classList.toggle('active',idx===1);
+  drawSceneRoutes();
+}
+
+/* ═══════════════════════════════════════════════
+   LERP along path
+═══════════════════════════════════════════════ */
+function lerp(path, pct) {
+  const n=path.length-1;
+  const f=pct*n;
+  const i=Math.min(Math.floor(f),n-1);
+  const t=f-i;
+  return [path[i][0]+(path[i+1][0]-path[i][0])*t, path[i][1]+(path[i+1][1]-path[i][1])*t];
+}
+
+/* ═══════════════════════════════════════════════
+   SCENE JOURNEY
+═══════════════════════════════════════════════ */
+const TICKS=90, TICK_MS=280;
+
+function startSceneJourney() {
+  if(isJourneyActive||!scenePaths[selectedSceneRoute]) return;
+  isJourneyActive=true;
+
+  document.getElementById('go-btn').innerText='⏳ Journey in Progress…';
+  document.getElementById('tb-status').innerText='En Route to Scene';
+  document.getElementById('stats-card').style.display='block';
+
+  // Notify victim
+  broadcast({ type:'JOURNEY_START' });
+  speak('Emergency ambulance departing. Smart signal corridor activated.');
+
+  const path=scenePaths[selectedSceneRoute];
+  const totalDist=haversine(path[0][0],path[0][1],path[path.length-1][0],path[path.length-1][1]);
+  const estDur=totalDist/8.3;  // ~30km/h
+
+  let step=0;
+  journeyTimer=setInterval(()=>{
+    step++;
+    const pct=step/TICKS;
+    const pos=lerp(path,pct);
+
+    ambMarker.setLatLng(pos);
+    if(step%5===0) aMap.panTo(pos,{animate:true,duration:.8});
+
+    const distRem=(totalDist*(1-pct)/1000).toFixed(1);
+    const etaMin=(estDur*(1-pct)/60).toFixed(1);
+    const spd=Math.round(30+Math.random()*15);
+
+    // Update local HUD
+    document.getElementById('a-speed').innerText=spd;
+    document.getElementById('hud-speed').innerText=spd;
+    document.getElementById('a-dist').innerText=distRem+' km';
+    document.getElementById('hud-dist').innerText=distRem+' km';
+    document.getElementById('a-eta').innerText=etaMin+' min';
+    document.getElementById('hud-eta').innerText=etaMin+' min';
+
+    // Broadcast position to victim
+    broadcast({ type:'POSITION', pos, eta:etaMin+' min', dist:distRem+' km' });
+
+    // Traffic lights
+    checkSignals(pos);
+
+    if(step>=TICKS) {
+      clearInterval(journeyTimer);
+      isJourneyActive=false;
+      document.getElementById('a-speed').innerText='0';
+      document.getElementById('hud-speed').innerText='0';
+      onSceneArrival();
+    }
+  }, TICK_MS);
+}
+
+/* ═══════════════════════════════════════════════
+   SIGNAL CHECK
+═══════════════════════════════════════════════ */
+function checkSignals(pos) {
+  let nearest=null, nearestDist=Infinity;
+  tlMarkers.forEach(tl=>{
+    const d=haversine(pos[0],pos[1],tl.data.lat,tl.data.lng);
+    if(d<280&&tl.data.state==='red'){
+      tl.data.state='green';
+      tl.lMarker.setIcon(makeTLIcon('green'));
+      tl.lMarker.setPopupContent(`<b>${tl.data.name}</b><br>🟢 GREEN`);
+      speak(`${tl.data.name}, green.`);
+    } else if(d>350&&tl.data.state==='green'){
+      tl.data.state='red';
+      tl.lMarker.setIcon(makeTLIcon('red'));
+      tl.lMarker.setPopupContent(`<b>${tl.data.name}</b><br>🔴 Normal`);
+    }
+    if(d<nearestDist){nearestDist=d; nearest=tl;}
+  });
+  if(nearest){
+    const col=nearest.data.state==='green'?'#10b981':'#ef4444';
+    const ico=nearest.data.state==='green'?'🟢':'🔴';
+    document.getElementById('hud-signal').style.color=col;
+    document.getElementById('a-signal-status').style.color=col;
+    const txt=`${ico} ${nearest.data.name} — ${nearest.data.state.toUpperCase()} (${Math.round(nearestDist)}m)`;
+    document.getElementById('hud-signal').innerHTML=txt;
+    document.getElementById('a-signal-status').innerHTML=txt;
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   SCENE ARRIVAL
+═══════════════════════════════════════════════ */
+function onSceneArrival() {
+  speak('Arrived at accident scene. Paramedics are with the patient. Please select hospital for transfer.');
+  document.getElementById('tb-status').innerText='Arrived — Select Hospital';
+  document.getElementById('hud-signal').innerHTML='✅ Arrived at Scene';
+
+  // Tell victim
+  broadcast({ type:'ARRIVED_SCENE' });
+
+  // Clear route lines, signals
+  sceneLines.forEach(l=>{ try{aMap.removeLayer(l);}catch(e){} });
+  clearTL();
+
+  // Move ambulance to scene
+  ambMarker.setLatLng([victimLat,victimLng]);
+  aMap.setView([victimLat,victimLng],13);
+
+  // Show hospital selection, hide scene card & stats
+  document.getElementById('scene-card').style.display='none';
+  document.getElementById('stats-card').style.display='none';
+  document.getElementById('hosp-select-card').style.display='block';
+  renderHospList();
+
+  // Prefetch hospital routes in background
+  loadHospitalRoutes();
+}
+
+/* ═══════════════════════════════════════════════
+   HOSPITAL LIST
+═══════════════════════════════════════════════ */
+function renderHospList() {
+  document.getElementById('hosp-list').innerHTML = HOSPITALS.map(h=>`
+    <div class="hosp-card ${h.recommended?'rec':''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <b style="font-size:12.5px;">${h.name}</b>
+        ${h.recommended?`<span style="background:var(--green);color:#022c22;font-size:9px;font-weight:900;padding:2px 6px;border-radius:4px;">RECOMMENDED</span>`:''}
+      </div>
+      <div style="display:flex;gap:12px;font-size:11px;color:var(--muted);margin-bottom:8px;">
+        <span>ICU Beds: <b style="color:var(--blue);">${h.icuBeds} Free</b></span>
+        <span>OT: <b style="color:var(--green);">${h.traumaOT}</b></span>
+      </div>
+      <button class="btn btn-green btn-full" style="font-size:12px;padding:8px;" onclick="selectHospital('${h.id}')">
+        🏥 Select &amp; View Routes
+      </button>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   HOSPITAL ROUTES
+═══════════════════════════════════════════════ */
+async function loadHospitalRoutes() {
+  for(const h of HOSPITALS){
+    try{
+      const from=`${victimLng},${victimLat}`, to=`${h.lng},${h.lat}`;
+      const midLat=(victimLat+h.lat)/2+(Math.random()-.5)*.005;
+      const midLng=(victimLng+h.lng)/2+(Math.random()-.5)*.005;
+      const [direct,alt]=await Promise.all([osrmFetch(from,to), osrmFetch(from,to,`${midLng},${midLat}`)]);
+      hospPaths[h.id]=[direct,alt];
+      h.distM=direct.dist; h.durS=direct.dur;
+    }catch(e){
+      const fb=linspace([victimLat,victimLng],[h.lat,h.lng],40);
+      hospPaths[h.id]=[{coords:fb,dist:2000,dur:300},{coords:fb,dist:2500,dur:360}];
+      h.distM=2000; h.durS=300;
+    }
+  }
+}
+
+function selectHospital(hid) {
+  selectedHospId=hid;
+  selectedHospRoute=0;
+  const hosp=HOSPITALS.find(h=>h.id===hid);
+
+  document.getElementById('hosp-select-card').style.display='none';
+  document.getElementById('hosp-routes-card').style.display='block';
+  document.getElementById('stats-card').style.display='block';
+
+  // Hospital marker
+  const hIcon=L.divIcon({
+    html:`<div style="background:#8b5cf6;width:34px;height:34px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px #8b5cf6;">🏥</div>`,
+    className:'',iconSize:[34,34],iconAnchor:[17,17]
+  });
+  L.marker([hosp.lat,hosp.lng],{icon:hIcon}).addTo(aMap).bindPopup(`<b>${hosp.name}</b>`).openPopup();
+
+  const routes=hospPaths[hid]||[];
+  const opts=document.getElementById('hosp-route-opts');
+  opts.innerHTML='';
+
+  if(!routes.length){
+    opts.innerHTML='<p style="color:var(--muted);font-size:12px;">Loading routes…</p>';
+    setTimeout(()=>{ if(hospPaths[hid]) selectHospital(hid); },2000);
+    return;
+  }
+
+  routes.forEach((r,i)=>{
+    const isSel=i===0, c=i===0?'var(--green)':'var(--amber)';
+    const sigCount=2+i+Math.floor(Math.random()*2);
+    const el=document.createElement('div');
+    el.className=`route-card ${isSel?'active':''}`;
+    el.onclick=()=>{ selectedHospRoute=i; document.querySelectorAll('#hosp-route-opts .route-card').forEach((c,ci)=>c.classList.toggle('active',ci===i)); drawHospRoutes(); };
+    el.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <b style="color:${c};font-size:13px;">Route ${i+1}${i===0?' — Direct':'— Via Town'}</b>
+        ${isSel?`<span style="background:var(--green);color:#022c22;font-size:9px;font-weight:900;padding:2px 6px;border-radius:4px;">BEST</span>`:''}
+      </div>
+      <div class="route-metrics">
+        <div><div class="rm-lbl">Time</div><div class="rm-val" style="color:${c};">${fDur(r.dur)}</div></div>
+        <div><div class="rm-lbl">Dist</div><div class="rm-val">${fDist(r.dist)}</div></div>
+        <div><div class="rm-lbl">Signals</div><div class="rm-val" style="color:var(--blue);">${sigCount}</div></div>
+        <div><div class="rm-lbl">Vehicles</div><div class="rm-val">${18+i*22}</div></div>
+      </div>`;
+    opts.appendChild(el);
+  });
+  drawHospRoutes();
+}
+
+function drawHospRoutes() {
+  hospLines.forEach(l=>{ try{aMap.removeLayer(l);}catch(e){} }); hospLines=[]; clearTL();
+  const routes=hospPaths[selectedHospId]; if(!routes) return;
+
+  routes.forEach((r,i)=>{
+    const isSel=i===selectedHospRoute;
+    const c=i===0?'#10b981':'#f59e0b';
+    const l=L.polyline(r.coords,{color:c,weight:isSel?6:3,opacity:isSel?.9:.35,dashArray:isSel?null:'7,6'}).addTo(aMap);
+    hospLines.push(l);
+  });
+
+  const sel=routes[selectedHospRoute];
+  const sigCount=2+selectedHospRoute+Math.floor(Math.random()*2);
+  drawTLMarkers(randomSignals(sel.coords,sigCount));
+
+  aMap.fitBounds(L.latLngBounds(sel.coords),{padding:[44,44]});
+  document.getElementById('a-dist').innerText=fDist(sel.dist);
+  document.getElementById('hud-dist').innerText=fDist(sel.dist);
+  document.getElementById('a-eta').innerText=fDur(sel.dur);
+  document.getElementById('hud-eta').innerText=fDur(sel.dur);
+}
+
+/* ═══════════════════════════════════════════════
+   HOSPITAL JOURNEY
+═══════════════════════════════════════════════ */
+function startHospJourney() {
+  if(isJourneyActive) return;
+  const routes=hospPaths[selectedHospId];
+  if(!routes){ alert('Routes still loading…'); return; }
+  isJourneyActive=true;
+
+  const path=routes[selectedHospRoute].coords;
+  const hosp=HOSPITALS.find(h=>h.id===selectedHospId);
+
+  document.getElementById('hosp-go-btn').innerText='⏳ En Route to Hospital…';
+  document.getElementById('tb-status').innerText=`En Route → ${hosp.name}`;
+
+  broadcast({ type:'JOURNEY_START', phase:'hospital', hospName:hosp.name });
+  speak(`Ambulance departing to ${hosp.name}. Smart corridor engaged.`);
+
+  const totalDist=haversine(path[0][0],path[0][1],path[path.length-1][0],path[path.length-1][1]);
+  const estDur=totalDist/8.3;
+
+  let step=0;
+  journeyTimer=setInterval(()=>{
+    step++;
+    const pct=step/TICKS;
+    const pos=lerp(path,pct);
+
+    ambMarker.setLatLng(pos);
+    if(step%5===0) aMap.panTo(pos,{animate:true,duration:.8});
+
+    const distRem=(totalDist*(1-pct)/1000).toFixed(1);
+    const etaMin=(estDur*(1-pct)/60).toFixed(1);
+    const spd=Math.round(30+Math.random()*15);
+
+    document.getElementById('a-speed').innerText=spd;
+    document.getElementById('hud-speed').innerText=spd;
+    document.getElementById('a-dist').innerText=distRem+' km';
+    document.getElementById('hud-dist').innerText=distRem+' km';
+    document.getElementById('a-eta').innerText=etaMin+' min';
+    document.getElementById('hud-eta').innerText=etaMin+' min';
+
+    checkSignals(pos);
+
+    if(step>=TICKS){
+      clearInterval(journeyTimer);
+      isJourneyActive=false;
+      document.getElementById('a-speed').innerText='0';
+      document.getElementById('hud-speed').innerText='0';
+      onHospArrival(hosp);
+    }
+  }, TICK_MS);
+}
+
+function onHospArrival(hosp) {
+  speak(`Arrived at ${hosp.name}. Patient handover complete.`);
+  document.getElementById('tb-status').innerText=`Arrived at ${hosp.name} ✅`;
+  document.getElementById('hud-signal').innerHTML='✅ Patient Delivered';
+  clearTL();
+  document.getElementById('hosp-routes-card').innerHTML=`
+    <div style="text-align:center;padding:20px;">
+      <div style="font-size:48px;margin-bottom:10px;">🏥</div>
+      <h3 style="color:#34d399;font-weight:900;margin-bottom:8px;">Patient Delivered!</h3>
+      <p style="font-size:12px;color:var(--muted);">Successfully transferred to<br><b style="color:#fff;">${hosp.name}</b></p>
+      <a href="index.html" class="btn btn-green" style="margin-top:16px;display:inline-flex;">← New Emergency</a>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+   CALL MODAL
+═══════════════════════════════════════════════ */
+let callTimer=null;
+function callVictim() {
+  document.getElementById('call-modal').classList.add('show');
+  document.getElementById('call-text').innerText='Connecting…';
+  callTimer=setTimeout(()=>{
+    document.getElementById('call-text').innerText="Caller: \"The person is breathing but the leg is bleeding badly. We are near the petrol pump.\"\nDriver: \"Keep pressing the cloth on the wound. We are 1 minute away — all lights are green.\"";
+    speak("Caller connected. Keep pressing cloth on wound. We are 1 minute away, all lights are green.");
+    // Reply on victim side too
+    broadcast({ type:'EXTRA_DESC', val:'Driver: We are almost there — all signals green. Keep pressing cloth on wound.' });
+  },2000);
+}
+function closeCall() {
+  clearTimeout(callTimer);
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  document.getElementById('call-modal').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════════ */
+function haversine(lat1,lon1,lat2,lon2) {
+  const R=6371e3,dL=(lat2-lat1)*Math.PI/180,dl=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dl/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function fDist(m){ return (m/1000).toFixed(1)+' km'; }
+function fDur(s){
+  const m=Math.floor(s/60),ss=Math.round(s%60);
+  return ss?`${m}.${Math.round(ss/6)} min`:`${m} min`;
+}
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.rate=0.95;
+  speechSynthesis.speak(u);
+}
+
+/* ── Boot ── */
+loadSceneRoutes();

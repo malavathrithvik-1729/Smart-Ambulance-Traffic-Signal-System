@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Lifeline — Emergency System</title>
+<link rel="stylesheet" href="css/em.css">
+<style>
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100vh; overflow: auto;
+    background: radial-gradient(ellipse at 50% 0%, #1a2e50 0%, #070c18 70%);
+  }
+
+  .logo-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .logo-icon { font-size: 44px; }
+  .logo-text h1 { font-size: 28px; font-weight: 900; letter-spacing: -.5px; }
+  .logo-text p  { font-size: 13px; color: var(--muted); }
+
+  .tagline {
+    font-size: 15px; color: #94a3b8;
+    max-width: 500px; text-align: center;
+    margin: 0 auto 32px; line-height: 1.6;
+  }
+
+  .entry-card {
+    background: #101c33; border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px 28px 24px;
+    width: 520px; max-width: 96vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  }
+
+  .entry-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--muted); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Audio recorder row */
+  .audio-row {
+    display: flex; gap: 8px; align-items: flex-start; margin-bottom: 12px;
+  }
+  .audio-transcript {
+    flex: 1; background: #0c1424; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 13px; color: #cbd5e1; min-height: 68px;
+    font-style: italic; line-height: 1.5;
+  }
+  .audio-transcript.typing { color: var(--text); font-style: normal; }
+
+  .record-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; background: var(--red); border: none;
+    color: #fff; border-radius: 8px; padding: 10px 12px;
+    cursor: pointer; font-size: 11px; font-weight: 700;
+    min-width: 68px; transition: all .2s;
+  }
+  .record-btn:hover { filter: brightness(1.1); }
+  .record-btn.recording { background: #7f1d1d; animation: rec-pulse 1s infinite alternate; }
+  .record-btn .mic-icon { font-size: 24px; }
+
+  @keyframes rec-pulse {
+    from { box-shadow: 0 0 0 0 rgba(239,68,68,.5); }
+    to   { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+  }
+
+  /* Location row */
+  .loc-row {
+    display: flex; gap: 8px; margin-bottom: 20px;
+  }
+  .loc-display {
+    flex: 1; background: #0c1424; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; font-size: 13px;
+    color: var(--muted); display: flex; align-items: center; gap: 8px;
+  }
+  .loc-display.got { color: var(--green); }
+
+  .divider {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--muted); font-size: 12px; margin: 14px 0;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .enter-btn {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: #fff; font-size: 16px; font-weight: 900; padding: 14px;
+    border-radius: 10px; border: none; width: 100%; cursor: pointer;
+    transition: all .2s; letter-spacing: .3px;
+    box-shadow: 0 6px 20px rgba(16,185,129,.35);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .enter-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .enter-btn:disabled { background: #1f2937; color: #4b5563; cursor: not-allowed; transform: none; box-shadow: none; }
+</style>
+</head>
+<body>
+
+<div class="logo-row">
+  <div class="logo-icon">🚑</div>
+  <div class="logo-text">
+    <h1>Team Lifeline</h1>
+    <p>Smart Ambulance Emergency System &bull; SPR High School, Kamareddy</p>
+  </div>
+</div>
+
+<p class="tagline">
+  In an emergency, use your voice to describe what happened, then share your location. Ambulance will reach you with smart traffic signal clearance.
+</p>
+
+<div class="entry-card">
+
+  <!-- STEP 1: Voice / Describe Emergency -->
+  <div class="entry-label">
+    <span>🎙️</span> Step 1 — Describe the Emergency (Speak or Type)
+  </div>
+
+  <div class="audio-row">
+    <div class="audio-transcript" id="transcript-box">
+      Press the microphone and speak what happened, or type below…
+    </div>
+    <button class="record-btn" id="record-btn" onclick="toggleRecording()">
+      <span class="mic-icon" id="mic-icon">🎙️</span>
+      <span id="rec-label">Hold to Speak</span>
+    </button>
+  </div>
+
+  <textarea
+    id="desc-input"
+    class="input"
+    rows="2"
+    placeholder="e.g. Accident on NH-44 bypass near Indian Oil pump. 2 people injured, one is bleeding heavily."
+    style="resize:none; margin-bottom: 14px;"
+  ></textarea>
+
+  <div class="divider">and</div>
+
+  <!-- STEP 2: Location -->
+  <div class="entry-label">
+    <span>📍</span> Step 2 — Your Location
+  </div>
+
+  <div class="loc-row">
+    <div class="loc-display" id="loc-display">
+      <span>📍</span>
+      <span id="loc-text">Location not captured yet</span>
+    </div>
+    <button class="btn btn-blue" onclick="getLocation()">
+      📍 Use My Location
+    </button>
+  </div>
+
+  <button
+    class="enter-btn"
+    id="enter-btn"
+    onclick="enterEmergency()"
+    disabled
+  >
+    🚨 CALL FOR EMERGENCY
+  </button>
+
+</div>
+
+<!-- Leaf JS not needed on landing page -->
+<script>
+  let userLat = null;
+  let userLng = null;
+  let recognition = null;
+  let isRecording = false;
+
+  /* ── Speech Recognition ── */
+  function toggleRecording() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Your browser does not support voice input. Please type your emergency description.');
+      return;
+    }
+
+    if (isRecording) {
+      recognition.stop();
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    isRecording = true;
+
+    const btn = document.getElementById('record-btn');
+    const icon = document.getElementById('mic-icon');
+    const lbl = document.getElementById('rec-label');
+    const box = document.getElementById('transcript-box');
+
+    btn.classList.add('recording');
+    icon.innerText = '⏹️';
+    lbl.innerText = 'Recording…';
+
+    recognition.onresult = (e) => {
+      let interim = '';
+      let final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) final += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
+      }
+      box.className = 'audio-transcript typing';
+      box.innerText = final || interim;
+      if (final) {
+        document.getElementById('desc-input').value = final.trim();
+        checkReady();
+      }
+    };
+
+    recognition.onerror = (e) => {
+      box.innerText = 'Voice capture failed. Please type your description.';
+      stopRecording();
+    };
+
+    recognition.onend = stopRecording;
+    recognition.start();
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    const btn = document.getElementById('record-btn');
+    const icon = document.getElementById('mic-icon');
+    const lbl = document.getElementById('rec-label');
+    btn.classList.remove('recording');
+    icon.innerText = '🎙️';
+    lbl.innerText = 'Hold to Speak';
+  }
+
+  /* ── Get Location ── */
+  function getLocation() {
+    const locText = document.getElementById('loc-text');
+    const locDisplay = document.getElementById('loc-display');
+    locText.innerText = 'Getting location…';
+
+    if (!navigator.geolocation) {
+      // Fallback: use Kamareddy demo coords
+      useDemoLocation();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+        locText.innerText = `Captured: ${userLat.toFixed(5)}°N, ${userLng.toFixed(5)}°E`;
+        locDisplay.classList.add('got');
+        checkReady();
+      },
+      (err) => {
+        // Geolocation blocked/unavailable → use Kamareddy demo coordinates
+        useDemoLocation();
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
+  function useDemoLocation() {
+    // Kamareddy accident scene coordinates
+    userLat = 18.3312;
+    userLng = 78.3445;
+    const locText = document.getElementById('loc-text');
+    const locDisplay = document.getElementById('loc-display');
+    locText.innerText = `Kamareddy, NH-44 Bypass (18.3312°N, 78.3445°E)`;
+    locDisplay.classList.add('got');
+    checkReady();
+  }
+
+  function checkReady() {
+    const desc = document.getElementById('desc-input').value.trim();
+    const btn = document.getElementById('enter-btn');
+    btn.disabled = !(desc.length > 3 && userLat !== null);
+  }
+
+  document.getElementById('desc-input').addEventListener('input', checkReady);
+
+  /* ── Enter Emergency ── */
+  function enterEmergency() {
+    const desc = document.getElementById('desc-input').value.trim();
+    // Store in localStorage so BOTH victim and ambulance pages can read it
+    const data = { desc, lat: userLat, lng: userLng, ts: Date.now() };
+    localStorage.setItem('lifeline_em_case', JSON.stringify(data));
+    window.location.href = 'victim.html';
+  }
+</script>
+</body>
+</html>

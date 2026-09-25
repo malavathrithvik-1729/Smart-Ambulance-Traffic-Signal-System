@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Victim Emergency Portal | Team Lifeline</title>
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  
+  <!-- Real-time Emergency Theme -->
+  <link rel="stylesheet" href="css/realtime.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-row">
+      <span style="font-size: 22px;">🚑</span>
+      <div>
+        <div class="brand-title">Team Lifeline &bull; Emergency Portal</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Assistance Link for Caller &bull; Case #EM-402</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="status-badge green" id="victim-status-badge">
+        <div class="pulse-dot green"></div>
+        <span id="victim-status-text">Ambulance Dispatched (ETA: ~3.8 mins)</span>
+      </div>
+
+      <a href="ambulance.html" target="_blank" class="btn outline" style="font-size: 12px; padding: 6px 12px;">
+        Open Ambulance Dashboard ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Body Grid -->
+  <div class="dashboard-body">
+
+    <!-- Left Sidebar: Location description, Dispatched Ambulance, Chatbot, Talk with Team -->
+    <aside class="side-panel">
+
+      <!-- 1. Dispatched Ambulance Status -->
+      <div class="card-box" style="border-color: #10b981; background: rgba(16,185,129,0.06);">
+        <div class="card-head">
+          <div class="card-title" style="color: #34d399;">
+            <span>🚑</span> Dispatched Ambulance
+          </div>
+          <span style="font-size: 11px; font-weight: 800; color: #10b981;">EN ROUTE</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; margin-bottom: 10px;">
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
+            <div style="color: var(--text-muted); font-size: 10px;">VEHICLE ID</div>
+            <b style="color: #fff; font-size: 13px;">AMB-LIFELINE-01</b>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px;">
+            <div style="color: var(--text-muted); font-size: 10px;">PARAMEDIC DRIVER</div>
+            <b style="color: #fff; font-size: 13px;">Officer R. Sharma</b>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 8px;">
+          <div>
+            <div style="font-size: 10px; color: var(--text-muted);">ESTIMATED ARRIVAL TIME</div>
+            <div style="font-size: 22px; font-weight: 900; color: #10b981;" id="side-eta">3.8 min</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 10px; color: var(--text-muted);">DISTANCE</div>
+            <div style="font-size: 18px; font-weight: 800; color: #fff;" id="side-dist">2.5 km</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+          <button class="btn emergency" style="width: 100%;" onclick="openAudioCall()">
+            <span>📞</span> Talk with Ambulance Team (Audio)
+          </button>
+        </div>
+      </div>
+
+
+      <!-- 2. Your Location & Add More Description -->
+      <div class="card-box">
+        <div class="card-head">
+          <div class="card-title" style="color: #38bdf8;">
+            <span>📍</span> Your Identified Location
+          </div>
+        </div>
+
+        <div style="font-size: 13px; color: #fff; margin-bottom: 4px; font-weight: bold;">
+          NH-44 Highway Bypass, Kamareddy
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px;" id="victim-current-desc">
+          Initial: "Near Indian Oil petrol pump & flyover pillar 42"
+        </div>
+
+        <!-- Add More Description Input -->
+        <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border); padding: 10px; border-radius: 8px;">
+          <label style="font-size: 11px; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 6px;">
+            Add More Details / Exact Landmark to Help Driver Find You:
+          </label>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="extra-desc-input" class="input-text" placeholder="e.g. Opposite blue tea stall, white car overturned..."/>
+            <button class="btn primary" style="white-space: nowrap;" onclick="updateLocationDescription()">
+              Save & Send
+            </button>
+          </div>
+          <div style="font-size: 10.5px; color: #10b981; margin-top: 6px; display: none;" id="desc-sent-confirmation">
+            ✓ Sent to ambulance driver's dashboard!
+          </div>
+        </div>
+      </div>
+
+
+      <!-- 3. Chat with Assistant for First Aid -->
+      <div class="card-box" style="display: flex; flex-direction: column; flex: 1; padding: 0; overflow: hidden;">
+        <div style="padding: 10px 14px; background: #0f172a; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+          <div class="card-title" style="color: #38bdf8; font-size: 12.5px;">
+            <span>🤖</span> First-Aid AI Assistant
+          </div>
+          <span style="font-size: 10.5px; color: #10b981; font-weight: bold;">Online</span>
+        </div>
+
+        <!-- Chat messages log -->
+        <div class="chat-log" id="chat-log-box" style="height: 180px;"></div>
+
+        <!-- Quick 1-Tap Buttons -->
+        <div class="chat-quick-btns">
+          <button class="quick-pill" onclick="sendQuickFirstAid('bleeding')">🩸 Bleeding</button>
+          <button class="quick-pill" onclick="sendQuickFirstAid('unconscious')">🫀 Unconscious / CPR</button>
+          <button class="quick-pill" onclick="sendQuickFirstAid('fracture')">🦴 Broken Bone</button>
+          <button class="quick-pill" onclick="sendQuickFirstAid('car_crash')">🚗 Car Crash / Smoke</button>
+        </div>
+
+        <!-- Chat Input -->
+        <form style="display: flex; padding: 8px 10px; background: #0c1424; border-top: 1px solid var(--border); gap: 6px;" onsubmit="handleChatSubmit(event)">
+          <input type="text" id="chat-input-text" class="input-text" placeholder="Ask first-aid questions..." autocomplete="off"/>
+          <button type="submit" class="btn primary" style="padding: 6px 12px; font-size: 12px;">Ask</button>
+        </form>
+      </div>
+
+    </aside>
+
+    <!-- Right: Map Displaying Victim & Approaching Ambulance -->
+    <main class="map-panel">
+      
+      <!-- Top Floating Telemetry Strip -->
+      <div class="floating-hud">
+        <div class="hud-panel">
+          <div class="hud-stat-box">
+            <span class="hud-lbl">Ambulance ETA</span>
+            <span class="hud-val" id="hud-eta-val" style="color: #10b981;">3.8 MIN</span>
+          </div>
+          <div class="hud-stat-box">
+            <span class="hud-lbl">Distance</span>
+            <span class="hud-val" id="hud-dist-val">2.5 KM</span>
+          </div>
+          <div class="hud-stat-box">
+            <span class="hud-lbl">Traffic Corridor Status</span>
+            <span class="hud-val" style="color: #38bdf8; font-size: 15px;">Smart Signals Turning Green</span>
+          </div>
+        </div>
+
+        <div class="hud-panel" style="gap: 10px;">
+          <span style="font-size: 12px; color: #cbd5e1;">📍 Your Location: <b>NH-44 Bypass</b></span>
+        </div>
+      </div>
+
+      <!-- The Leaflet Map Canvas -->
+      <div id="map"></div>
+    </main>
+
+  </div>
+
+  <!-- Audio Call Modal Screen -->
+  <div class="audio-call-modal" id="victim-call-modal">
+    <div class="call-box">
+      <div class="call-avatar-circle">🚑</div>
+      <h3 style="font-size: 18px; color: #fff; margin-bottom: 4px;">Ambulance Team Audio</h3>
+      <div style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 20px;">
+        Officer R. Sharma (Ambulance AMB-01)
+      </div>
+      <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); padding: 12px; border-radius: 8px; font-size: 12px; color: #38bdf8; margin-bottom: 20px;" id="victim-call-log">
+        Connecting emergency audio line...
+      </div>
+      <button class="btn emergency" style="border-radius: 50%; width: 56px; height: 56px; padding: 0; margin: 0 auto;" onclick="closeAudioCall()">
+        ✕
+      </button>
+    </div>
+  </div>
+
+  <!-- Automatic Arrival Screen: Closes dashboard upon arrival -->
+  <div class="victim-arrival-overlay" id="victim-arrival-screen">
+    <div class="arrival-card">
+      <div style="font-size: 64px; margin-bottom: 16px;">🚑</div>
+      <h2 style="font-size: 26px; font-weight: 900; margin-bottom: 12px; color: #34d399;">
+        Ambulance Has Arrived!
+      </h2>
+      <p style="font-size: 15px; color: #d1fae5; line-height: 1.6; margin-bottom: 24px;">
+        Paramedic team (Officer R. Sharma) is at your spot right now.<br>
+        Please stay with the paramedics. This emergency tracking session is now complete.
+      </p>
+      <button class="btn primary lg" style="background: #047857; border: 1px solid #34d399; width: 100%;" onclick="closeDashboardWindow()">
+        Dismiss & Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Leaflet & Real-Time Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/real-roads.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script>
+    // 1. Initialize Map with Clean OpenStreetMap Tiles (NO API KEY, NO WATERMARKS)
+    const map = L.map("map", { zoomControl: false }).setView([18.3250, 78.3400], 14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "© OpenStreetMap contributors"
+    }).addTo(map);
+
+    // Victim Location Marker
+    const victimCoords = [REAL_ROADS.victimLocation.lat, REAL_ROADS.victimLocation.lng];
+    const victimIcon = L.divIcon({
+      html: `<div style="background:#ef4444;width:34px;height:34px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;box-shadow:0 0 16px #ef4444;">📍</div>`,
+      className: "v-icon",
+      iconSize: [34, 34],
+      iconAnchor: [17, 17]
+    });
+    const victimMarker = L.marker(victimCoords, { icon: victimIcon }).addTo(map).bindPopup("<b>Your Location (Accident Spot)</b><br>NH-44 Bypass").openPopup();
+
+    // Ambulance Marker
+    const baseCoords = [REAL_ROADS.baseLocation.lat, REAL_ROADS.baseLocation.lng];
+    const ambIcon = L.divIcon({
+      html: `<div style="background:#10b981;width:38px;height:38px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 16px #10b981;">🚑</div>`,
+      className: "a-icon",
+      iconSize: [38, 38],
+      iconAnchor: [19, 19]
+    });
+    const ambMarker = L.marker(baseCoords, { icon: ambIcon }).addTo(map).bindPopup("<b>Ambulance AMB-01</b><br>Dispatched & En Route");
+
+    // Real road route polyline
+    const roadPath = REAL_ROADS.routes[0].path;
+    L.polyline(roadPath, { color: "#10b981", weight: 6, opacity: 0.85 }).addTo(map);
+    map.fitBounds([baseCoords, victimCoords], { padding: [50, 50] });
+
+    // 2. Chatbot Setup
+    const chatbot = new FirstAidChatbot("chat-log-box");
+    chatbot.init();
+
+    function handleChatSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById("chat-input-text");
+      const val = input.value;
+      if (!val) return;
+      input.value = "";
+      chatbot.handleUserQuery(val);
+    }
+
+    function sendQuickFirstAid(topicKey) {
+      if (FIRST_AID_KNOWLEDGE[topicKey]) {
+        const item = FIRST_AID_KNOWLEDGE[topicKey];
+        chatbot.addUserMessage(`Tell me how to handle: ${item.title}`);
+        setTimeout(() => {
+          chatbot.addBotMessage(`### ${item.title}\n\n${item.steps.join("\n\n")}`);
+        }, 300);
+      }
+    }
+
+    // 3. Add more location description & sync with driver
+    function updateLocationDescription() {
+      const input = document.getElementById("extra-desc-input");
+      const extra = input.value.trim();
+      if (!extra) return;
+
+      const fullDesc = `Initial: "Near Indian Oil petrol pump & pillar 42" | Caller added: "${extra}"`;
+      document.getElementById("victim-current-desc").innerText = fullDesc;
+
+      // Broadcast to ambulance dashboard in real time!
+      emergencySync.send("LOCATION_DESCRIPTION_UPDATED", {
+        description: extra,
+        fullText: fullDesc
+      });
+
+      const confirmEl = document.getElementById("desc-sent-confirmation");
+      confirmEl.style.display = "block";
+      setTimeout(() => confirmEl.style.display = "none", 4000);
+    }
+
+    // 4. Audio Call with Team
+    let callTimer = null;
+    function openAudioCall() {
+      document.getElementById("victim-call-modal").classList.add("open");
+      const logEl = document.getElementById("victim-call-log");
+      logEl.innerText = "Calling Ambulance Driver...";
+
+      emergencySync.send("AUDIO_CALL_STARTED", { from: "VICTIM" });
+
+      if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance("Connecting to Ambulance Driver Officer Sharma.");
+        window.speechSynthesis.speak(u);
+      }
+
+      callTimer = setTimeout(() => {
+        logEl.innerHTML = "<b>Call Connected!</b><br>Driver: 'Hello, this is Officer Sharma. We are on NH-44, 2 minutes away. All traffic lights are green. Keep the patient calm.'";
+        if ('speechSynthesis' in window) {
+          const u2 = new SpeechSynthesisUtterance("Officer Sharma here. We are 2 minutes away on National Highway 44. Traffic lights are green. Keep the patient calm.");
+          window.speechSynthesis.speak(u2);
+        }
+      }, 2000);
+    }
+
+    function closeAudioCall() {
+      clearTimeout(callTimer);
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      document.getElementById("victim-call-modal").classList.remove("open");
+    }
+
+    // 5. Real-Time Sync Listener from Ambulance Driver Dashboard
+    emergencySync.on((msg) => {
+      if (msg.type === "AMBULANCE_PROGRESS") {
+        const { lat, lng, distKm, etaMin } = msg.payload;
+        ambMarker.setLatLng([lat, lng]);
+        document.getElementById("side-eta").innerText = `${etaMin} min`;
+        document.getElementById("side-dist").innerText = `${distKm} km`;
+        document.getElementById("hud-eta-val").innerText = `${etaMin} MIN`;
+        document.getElementById("hud-dist-val").innerText = `${distKm} KM`;
+      }
+
+      if (msg.type === "AMBULANCE_ARRIVED") {
+        // Automatically close/show arrival screen!
+        document.getElementById("victim-arrival-screen").classList.add("open");
+        if ('speechSynthesis' in window) {
+          const u = new SpeechSynthesisUtterance("Ambulance has arrived at your spot. Paramedics are with you now.");
+          window.speechSynthesis.speak(u);
+        }
+      }
+
+      if (msg.type === "AUDIO_CALL_STARTED" && msg.payload.from === "DRIVER") {
+        openAudioCall();
+      }
+    });
+
+    function closeDashboardWindow() {
+      document.getElementById("victim-arrival-screen").classList.remove("open");
+    }
+  </script>
+</body>
+</html>
