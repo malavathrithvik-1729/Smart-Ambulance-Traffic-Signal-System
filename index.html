@@ -98,18 +98,36 @@
   .enter-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .enter-btn:disabled { background: #1f2937; color: #4b5563; cursor: not-allowed; transform: none; box-shadow: none; }
 
-  /* ── How to Use button ── */
-  .how-btn {
-    position: fixed; top: 18px; right: 20px;
-    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-    color: #fff; border: none; border-radius: 10px;
-    padding: 10px 18px; font-size: 13px; font-weight: 700;
-    cursor: pointer; z-index: 2000;
-    display: flex; align-items: center; gap: 7px;
-    box-shadow: 0 4px 18px rgba(59,130,246,.5);
-    transition: all .2s;
+  /* ── Top right floating actions ── */
+  .top-action-bar {
+    position: fixed; top: 16px; right: 20px;
+    z-index: 2000; display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap; justify-content: flex-end; max-width: 90vw;
   }
-  .how-btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+  .top-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 9px; font-size: 12px; font-weight: 700;
+    text-decoration: none; border: none; cursor: pointer;
+    transition: all .2s ease; white-space: nowrap; line-height: 1;
+  }
+  .top-btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn-demo-pdf {
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    color: #fff; box-shadow: 0 4px 14px rgba(59,130,246,.45);
+  }
+  .btn-proj-details {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff; box-shadow: 0 4px 14px rgba(16,185,129,.45);
+  }
+  .btn-sub-pdf {
+    background: rgba(15, 23, 42, 0.85); color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.15); backdrop-filter: blur(4px);
+  }
+  .btn-sub-pdf:hover { background: rgba(30, 41, 59, 0.95); color: #fff; border-color: var(--blue); }
+  .btn-guide-modal {
+    background: rgba(30, 41, 59, 0.85); color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.35); backdrop-filter: blur(4px);
+  }
 
   /* ── Modal overlay ── */
   .how-modal-overlay {
@@ -207,13 +225,27 @@
 </head>
 <body>
 
-<!-- ── How to Use / Demo Button (fixed top-right) ── -->
-<button class="how-btn" onclick="openHowModal()">
-  📖 How to Use / Demo
-</button>
+<!-- ── Top-right floating action buttons ── -->
+<div class="top-action-bar">
+  <a href="manual.pdf" target="_blank" class="top-btn btn-demo-pdf" title="Open Website Demo Manual PDF">
+    📖 Website Demo (PDF)
+  </a>
+  <a href="project-details.html" target="_blank" class="top-btn btn-proj-details" title="Open Project Details (Problem, Solution & Evidences)">
+    🔬 Project Details
+  </a>
+  <a href="problem-solution.pdf" target="_blank" class="top-btn btn-sub-pdf" title="Open Problem and Solution PDF">
+    📄 Problem &amp; Solution (PDF)
+  </a>
+  <a href="evidences.pdf" target="_blank" class="top-btn btn-sub-pdf" title="Open Research Evidences PDF">
+    📊 Evidences (PDF)
+  </a>
+  <button class="top-btn btn-guide-modal" onclick="openHowModal()" title="View step-by-step testing instructions">
+    💡 Demo Steps
+  </button>
+</div>
 
 <!-- ── How to Use Modal ── -->
-<div class="how-modal-overlay" id="how-modal-overlay" onclick="handleOverlayClick(event)">
+<div class="how-modal-overlay" id="how-modal-overlay" onclick="handleOverlayClick(event,'how-modal-overlay')">
   <div class="how-modal" id="how-modal">
 
     <div class="how-modal-header">
@@ -260,172 +292,267 @@
       </p>
 
       <div class="test-steps">
-
-        <!-- Phase 1 -->
-        <div class="phase-strip" style="background:rgba(30,41,59,.9);color:#94a3b8;border:1px solid #334155;">
-          PHASE 1 — Setup
-        </div>
-
+        <div class="phase-strip" style="background:rgba(30,41,59,.9);color:#94a3b8;border:1px solid #334155;">PHASE 1 — Setup</div>
         <div class="test-step" style="background:rgba(16,185,129,.06);">
           <div class="step-n" style="background:#059669;color:#fff;">1</div>
-          <div>
-            <div class="step-title">Open two Chrome windows side by side</div>
-            <div class="step-desc">Press <b>Ctrl+N</b> to open a second Chrome window. Window 1 = Caller/Victim. Window 2 = Ambulance Driver.</div>
-          </div>
+          <div><div class="step-title">Open two Chrome windows side by side</div>
+          <div class="step-desc">Press <b>Ctrl+N</b> for a second window. Window 1 = Caller/Victim &bull; Window 2 = Ambulance Driver.</div></div>
         </div>
-
         <div class="test-step" style="background:rgba(255,255,255,.02);">
           <div class="step-n" style="background:#059669;color:#fff;">2</div>
-          <div>
-            <div class="step-title">Open ambulance.html in Window 2</div>
-            <div class="step-desc">In the second window, open <b>ambulance.html</b> — keep it visible alongside this page.</div>
-          </div>
+          <div><div class="step-title">Open ambulance.html in Window 2</div>
+          <div class="step-desc">Keep it visible alongside this page — they communicate in real time.</div></div>
         </div>
 
-        <!-- Phase 2 -->
-        <div class="phase-strip" style="background:rgba(16,185,129,.18);color:#34d399;border:1px solid rgba(16,185,129,.4);">
-          PHASE 2 — Report the Emergency (Window 1 — This Page)
-        </div>
-
+        <div class="phase-strip" style="background:rgba(16,185,129,.18);color:#34d399;border:1px solid rgba(16,185,129,.4);">PHASE 2 — Report the Emergency (Window 1)</div>
         <div class="test-step" style="background:rgba(16,185,129,.06);">
           <div class="step-n" style="background:#059669;color:#fff;">3</div>
-          <div>
-            <div class="step-title">Describe the emergency</div>
-            <div class="step-desc">Click 🎙️ <b>Hold to Speak</b> and say the emergency, e.g. <i>"Accident near Kamareddy bus stand, one person injured."</i> — OR type it in the textarea below.</div>
-            <div class="step-tip">💡 Voice needs microphone permission in Chrome. If unavailable, just type.</div>
-          </div>
+          <div><div class="step-title">Describe the emergency</div>
+          <div class="step-desc">Click 🎙️ <b>Hold to Speak</b> and say the emergency — or type it in the textarea below.</div>
+          <div class="step-tip">💡 Voice needs microphone permission. If unavailable, just type.</div></div>
         </div>
-
         <div class="test-step" style="background:rgba(255,255,255,.02);">
           <div class="step-n" style="background:#059669;color:#fff;">4</div>
-          <div>
-            <div class="step-title">Share your location</div>
-            <div class="step-desc">Click <b>📍 Use My Location</b> and Allow. Coordinates turn green. If denied, Kamareddy demo coordinates are used automatically — that's fine.</div>
-          </div>
+          <div><div class="step-title">Share your location</div>
+          <div class="step-desc">Click <b>📍 Use My Location</b> → Allow. If denied, Kamareddy demo coordinates are used automatically.</div></div>
         </div>
-
         <div class="test-step" style="background:rgba(16,185,129,.06);">
           <div class="step-n" style="background:#059669;color:#fff;">5</div>
-          <div>
-            <div class="step-title">Press "🚨 CALL FOR EMERGENCY"</div>
-            <div class="step-desc">Button turns bright green once description + location are ready. Click it — page navigates to the <b>Victim Dashboard (victim.html)</b> automatically.</div>
-          </div>
+          <div><div class="step-title">Press "🚨 CALL FOR EMERGENCY"</div>
+          <div class="step-desc">Button turns green when both fields are ready. Click it — page navigates to the Victim Dashboard automatically.</div></div>
         </div>
 
-        <!-- Phase 3 -->
-        <div class="phase-strip" style="background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.4);">
-          PHASE 3 — Driver Dashboard (Window 2)
-        </div>
-
+        <div class="phase-strip" style="background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.4);">PHASE 3 — Driver Dashboard (Window 2)</div>
         <div class="test-step" style="background:rgba(59,130,246,.06);">
           <div class="step-n" style="background:#1d4ed8;color:#fff;">6</div>
-          <div>
-            <div class="step-title">Check incident &amp; review routes on ambulance.html</div>
-            <div class="step-desc">Your emergency description appears in the red sidebar card. Two routes show on the map — green solid (Route 1, BEST) and amber dashed (Route 2). Click either card to switch.</div>
-          </div>
+          <div><div class="step-title">Check incident &amp; review routes on ambulance.html</div>
+          <div class="step-desc">Your emergency description appears in the red sidebar card. Two routes on the map — green (Route 1 BEST) and amber (Route 2). Click cards to switch.</div></div>
         </div>
-
         <div class="test-step" style="background:rgba(255,255,255,.02);">
           <div class="step-n" style="background:#1d4ed8;color:#fff;">7</div>
-          <div>
-            <div class="step-title">Press "🚀 Go — Start Journey"</div>
-            <div class="step-desc">Ambulance marker starts moving on the map. Switch to Window 1 — victim dashboard should show <b style="color:#10b981;">"Ambulance En Route"</b> with live ETA countdown.</div>
-          </div>
+          <div><div class="step-title">Press "🚀 Go — Start Journey"</div>
+          <div class="step-desc">Ambulance starts moving. Switch to Window 1 — victim dashboard shows <b style="color:#10b981;">"Ambulance En Route"</b> with live ETA.</div></div>
         </div>
 
-        <!-- Phase 4 -->
-        <div class="phase-strip" style="background:rgba(124,58,237,.18);color:#c084fc;border:1px solid rgba(124,58,237,.4);">
-          PHASE 4 — Smart Signals &amp; AI Chatbot
-        </div>
-
+        <div class="phase-strip" style="background:rgba(124,58,237,.18);color:#c084fc;border:1px solid rgba(124,58,237,.4);">PHASE 4 — Smart Signals &amp; AI Chatbot</div>
         <div class="test-step" style="background:rgba(124,58,237,.06);">
           <div class="step-n" style="background:#7c3aed;color:#fff;">8</div>
-          <div>
-            <div class="step-title">Watch signal icons turn green on the driver map</div>
-            <div class="step-desc">As ambulance approaches within 280 m of a signal it turns <b style="color:#10b981;">🟢 GREEN</b>. After passing 350 m it reverts to <b style="color:#ef4444;">🔴 RED</b>. Voice announces each junction.</div>
-          </div>
+          <div><div class="step-title">Watch signal icons turn green on the driver map</div>
+          <div class="step-desc">Within 280 m → <b style="color:#10b981;">🟢 GREEN</b>. After 350 m past → <b style="color:#ef4444;">🔴 RED</b>. Voice announces each junction.</div></div>
         </div>
-
         <div class="test-step" style="background:rgba(255,255,255,.02);">
           <div class="step-n" style="background:#7c3aed;color:#fff;">9</div>
-          <div>
-            <div class="step-title">Test the First-Aid AI chatbot (victim.html)</div>
-            <div class="step-desc">Click <b>🩸 Bleeding</b>, <b>🫀 Unconscious</b>, <b>🦴 Fracture</b>, or <b>🚗 Crash</b> for instant first-aid steps. Or type any question and press <b>Ask</b>.</div>
-          </div>
+          <div><div class="step-title">Test First-Aid AI chatbot &amp; in-app call</div>
+          <div class="step-desc">On victim.html click 🩸 Bleeding, 🫀 Unconscious, 🦴 Fracture, 🚗 Crash for instant first-aid. Also test the 📞 call button on either page.</div></div>
         </div>
 
-        <div class="test-step" style="background:rgba(124,58,237,.06);">
-          <div class="step-n" style="background:#7c3aed;color:#fff;">10</div>
-          <div>
-            <div class="step-title">Test the in-app call feature</div>
-            <div class="step-desc">Press <b>"📞 Talk with Ambulance Team"</b> on victim.html or <b>"📞 Call Victim"</b> on ambulance.html. A simulated conversation shows and is read aloud by text-to-speech.</div>
-            <div class="step-tip">💡 Unmute speakers to hear the voice announcement.</div>
-          </div>
-        </div>
-
-        <!-- Phase 5 -->
-        <div class="phase-strip" style="background:rgba(239,68,68,.18);color:#fca5a5;border:1px solid rgba(239,68,68,.4);">
-          PHASE 5 — Arrival &amp; Hospital Transfer
-        </div>
-
+        <div class="phase-strip" style="background:rgba(239,68,68,.18);color:#fca5a5;border:1px solid rgba(239,68,68,.4);">PHASE 5 — Arrival &amp; Hospital Transfer</div>
         <div class="test-step" style="background:rgba(239,68,68,.06);">
-          <div class="step-n" style="background:#dc2626;color:#fff;">11</div>
-          <div>
-            <div class="step-title">Ambulance arrives at scene (~25 sec)</div>
-            <div class="step-desc">Victim.html shows <b style="color:#34d399;">"Ambulance Has Arrived!"</b> overlay. Driver.html shows the <b>Select Hospital</b> card with ICU beds and OT status.</div>
-          </div>
+          <div class="step-n" style="background:#dc2626;color:#fff;">10</div>
+          <div><div class="step-title">Ambulance arrives → select hospital → transfer patient</div>
+          <div class="step-desc">Victim.html shows <b style="color:#34d399;">"Ambulance Has Arrived!"</b>. Driver selects hospital → route → presses <b style="color:#a78bfa;">"🏥 Go — Transfer Patient"</b>.</div></div>
         </div>
-
-        <div class="test-step" style="background:rgba(255,255,255,.02);">
-          <div class="step-n" style="background:#dc2626;color:#fff;">12</div>
-          <div>
-            <div class="step-title">Select hospital &amp; transfer patient</div>
-            <div class="step-desc">Click <b>"🏥 Select &amp; View Routes"</b> on the recommended hospital → choose Route 1 Direct → press <b style="color:#a78bfa;">"🏥 Go — Transfer Patient"</b>. Smart signals activate again for the hospital route.</div>
-          </div>
-        </div>
-
         <div class="test-step" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);">
           <div class="step-n" style="background:#10b981;color:#fff;">✓</div>
-          <div>
-            <div class="step-title" style="color:#34d399;">Mission Complete! 🎉</div>
-            <div class="step-desc">Driver dashboard shows <b>"Patient Delivered!"</b>. Click <b>"← New Emergency"</b> to restart the demo from the beginning.</div>
-          </div>
+          <div><div class="step-title" style="color:#34d399;">Mission Complete! 🎉</div>
+          <div class="step-desc">Driver shows <b>"Patient Delivered!"</b>. Click <b>"← New Emergency"</b> to restart the demo.</div></div>
         </div>
+      </div>
 
-      </div><!-- /test-steps -->
-
-      <!-- Coming Soon -->
       <div class="coming-box">
         <h4>🚀 Version 2.0 — Coming Soon</h4>
         <ul>
-          <li>Real IoT hardware integration with physical traffic signal controllers</li>
-          <li>Live GPS tracking from actual ambulance vehicles via 4G/5G</li>
-          <li>Mobile app (Android/iOS) for ambulance drivers with offline maps</li>
-          <li>Multi-ambulance coordination — auto-dispatch nearest available unit</li>
-          <li>Live hospital bed &amp; OT availability via district hospital API</li>
-          <li>Real WebRTC voice calls between victim device and driver</li>
-          <li>SMS/WhatsApp ETA alerts sent to victim's family automatically</li>
+          <li>Real IoT hardware with physical traffic signal controllers</li>
+          <li>Live GPS from actual ambulance vehicles via 4G/5G</li>
+          <li>Mobile app (Android/iOS) for drivers with offline maps</li>
+          <li>Multi-ambulance coordination — auto-dispatch nearest unit</li>
+          <li>Live hospital bed &amp; OT availability via district API</li>
+          <li>Real WebRTC voice calls between victim and driver</li>
+          <li>SMS/WhatsApp ETA alerts to victim's family</li>
         </ul>
+      </div>
+    </div>
+
+    <div class="how-modal-footer">
+      <span>Team Lifeline &bull; SPR High School, Kamareddy &bull; Demo v1.0</span>
+      <button onclick="closeHowModal()" style="background:#1d4ed8;color:#fff;border:none;padding:7px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Close Guide</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PROJECT DETAILS MODAL
+══════════════════════════════════════════════════════ -->
+<div class="how-modal-overlay" id="proj-modal-overlay" onclick="handleOverlayClick(event,'proj-modal-overlay')">
+  <div class="how-modal" id="proj-modal" style="max-width:800px;">
+
+    <!-- Header -->
+    <div class="how-modal-header" style="background:linear-gradient(135deg,#065f46 0%,#059669 100%);">
+      <div>
+        <h2>🔬 Project Details</h2>
+        <p>Team Lifeline — Smart Ambulance Traffic Signal System &bull; SPR High School, Kamareddy</p>
+      </div>
+      <button class="how-close" onclick="closeProjModal()">✕</button>
+    </div>
+
+    <div class="how-modal-body" style="max-height:78vh;overflow-y:auto;">
+
+      <!-- Problem Statement -->
+      <div class="how-section-title" style="color:#f87171;">⚠️ Problem Statement</div>
+      <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+        <p style="font-size:13px;font-weight:800;color:#fca5a5;margin:0 0 8px;">Every minute counts in a medical emergency — and traffic signals are killing people.</p>
+        <ul style="margin:0;padding-left:18px;font-size:11.5px;color:#94a3b8;line-height:1.9;">
+          <li>In India, <b style="color:#f87171;">over 1.5 lakh people die annually</b> in road accidents. Many die waiting for ambulances stuck in traffic.</li>
+          <li>Ambulances in small cities like Kamareddy have <b style="color:#f87171;">no dedicated signal clearance system</b> — they depend on honking and luck.</li>
+          <li>There is <b style="color:#f87171;">no real-time link</b> between the accident victim, the ambulance driver, and the traffic infrastructure.</li>
+          <li>Victims have <b style="color:#f87171;">no first-aid guidance</b> during the critical minutes before the ambulance arrives.</li>
+          <li>Emergency call systems in India are slow — manual dispatch adds <b style="color:#f87171;">3–8 minutes of avoidable delay</b>.</li>
+        </ul>
+      </div>
+
+      <!-- Solution -->
+      <div class="how-section-title" style="color:#34d399;">✅ Our Solution</div>
+      <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+        <p style="font-size:13px;font-weight:800;color:#34d399;margin:0 0 8px;">Team Lifeline — A unified digital emergency response system that removes all friction between accident and hospital.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+          <div style="background:rgba(16,185,129,.1);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:800;color:#10b981;margin-bottom:5px;">🎙️ Instant Emergency Reporting</div>
+            <div style="font-size:10.5px;color:#94a3b8;line-height:1.6;">Voice-to-text emergency description + GPS location captured in under 10 seconds. One tap dispatches the ambulance.</div>
+          </div>
+          <div style="background:rgba(59,130,246,.1);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:800;color:#3b82f6;margin-bottom:5px;">🚦 Smart Signal Clearance</div>
+            <div style="font-size:10.5px;color:#94a3b8;line-height:1.6;">Proximity algorithm turns signals green within 280 m of the ambulance, restoring normal traffic after it passes.</div>
+          </div>
+          <div style="background:rgba(124,58,237,.1);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:800;color:#a78bfa;margin-bottom:5px;">🤖 First-Aid AI Chatbot</div>
+            <div style="font-size:10.5px;color:#94a3b8;line-height:1.6;">Provides step-by-step first-aid guidance for bleeding, fractures, CPR, and crashes during the wait time.</div>
+          </div>
+          <div style="background:rgba(245,158,11,.1);border-radius:8px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:800;color:#fbbf24;margin-bottom:5px;">🏥 Hospital-to-Driver Link</div>
+            <div style="font-size:10.5px;color:#94a3b8;line-height:1.6;">Driver selects hospital with live ICU and OT availability, routes navigate with smart signal clearance all the way.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Impact / Stats -->
+      <div class="how-section-title" style="color:#fbbf24;">📊 Expected Impact</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;">
+        <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px 8px;text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:#f87171;">60%</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:4px;line-height:1.4;">Reduction in signal waiting time</div>
+        </div>
+        <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px 8px;text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:#34d399;">&lt;10s</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:4px;line-height:1.4;">Emergency dispatch time</div>
+        </div>
+        <div style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:12px 8px;text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:#60a5fa;">24/7</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:4px;line-height:1.4;">System availability, no downtime</div>
+        </div>
+        <div style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:12px 8px;text-align:center;">
+          <div style="font-size:22px;font-weight:900;color:#c084fc;">0</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:4px;line-height:1.4;">Hardware needed for this demo</div>
+        </div>
+      </div>
+
+      <!-- Technology Used -->
+      <div class="how-section-title" style="color:#38bdf8;">🛠️ Technology Used</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="background:rgba(255,255,255,.03);border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10.5px;font-weight:800;color:#38bdf8;margin-bottom:6px;">Frontend</div>
+          <div style="font-size:10.5px;color:#94a3b8;line-height:1.8;">HTML5 &bull; CSS3 &bull; Vanilla JavaScript<br>Web Speech API (voice input)<br>Geolocation API (GPS capture)<br>BroadcastChannel API (real-time sync)</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10.5px;font-weight:800;color:#38bdf8;margin-bottom:6px;">Mapping &amp; Routing</div>
+          <div style="font-size:10.5px;color:#94a3b8;line-height:1.8;">Leaflet.js (interactive maps)<br>OpenStreetMap (map tiles)<br>OSRM API (real road routing)<br>Haversine formula (distance calc)</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10.5px;font-weight:800;color:#38bdf8;margin-bottom:6px;">Smart Signal Algorithm</div>
+          <div style="font-size:10.5px;color:#94a3b8;line-height:1.8;">Proximity trigger at 280 m (green)<br>Reset trigger at 350 m (red)<br>Moving corridor — only 1–2 green at once<br>Voice announcement via Web Speech API</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">
+          <div style="font-size:10.5px;font-weight:800;color:#38bdf8;margin-bottom:6px;">Future Stack (v2.0)</div>
+          <div style="font-size:10.5px;color:#94a3b8;line-height:1.8;">Raspberry Pi / Arduino (IoT signals)<br>4G/5G GPS module in ambulance<br>Firebase / Node.js backend<br>Android &amp; iOS mobile apps</div>
+        </div>
+      </div>
+
+      <!-- Evidence / Screenshots -->
+      <div class="how-section-title" style="color:#c084fc;">📸 Evidence — System in Action</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+        <div style="background:rgba(255,255,255,.03);border:1px solid #1e3a5f;border-radius:8px;overflow:hidden;">
+          <img src="assets/2.png" style="width:100%;display:block;" alt="Emergency call filled and ready">
+          <div style="padding:7px 10px;font-size:10px;color:#64748b;">Fig 1: Emergency call filled — location captured, button active</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid #1e3a5f;border-radius:8px;overflow:hidden;">
+          <img src="assets/4.png" style="width:100%;display:block;" alt="Driver route selection">
+          <div style="padding:7px 10px;font-size:10px;color:#64748b;">Fig 2: Driver dashboard — routes calculated, signals on map</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid #1e3a5f;border-radius:8px;overflow:hidden;">
+          <img src="assets/6.png" style="width:100%;display:block;" alt="Signal turning green">
+          <div style="padding:7px 10px;font-size:10px;color:#64748b;">Fig 3: Smart signal clearance — Market Junction GREEN (40 m ahead)</div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid #1e3a5f;border-radius:8px;overflow:hidden;">
+          <img src="assets/12.png" style="width:100%;display:block;" alt="Ambulance arrived">
+          <div style="padding:7px 10px;font-size:10px;color:#64748b;">Fig 4: Ambulance arrived — victim dashboard shows ETA 0.0 min</div>
+        </div>
+      </div>
+
+      <!-- Team -->
+      <div class="how-section-title" style="color:#fbbf24;">👥 About the Team</div>
+      <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:13px 16px;margin-bottom:16px;">
+        <p style="font-size:12.5px;font-weight:800;color:#fbbf24;margin:0 0 6px;">Team Lifeline — SPR High School, Kamareddy</p>
+        <p style="font-size:11.5px;color:#94a3b8;margin:0;line-height:1.8;">
+          We are a team of students passionate about using technology to solve real-world emergency response challenges in our community.
+          This project was built entirely by school students using free and open-source technologies — no paid APIs or external funding.
+          Our goal is to make emergency response faster, smarter, and accessible in every small city across India.
+        </p>
+      </div>
+
+      <!-- PDF Download -->
+      <div style="background:linear-gradient(135deg,rgba(30,58,138,.4),rgba(67,56,202,.3));border:1px solid rgba(99,102,241,.4);border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#c7d2fe;margin-bottom:4px;">📄 Full Project Manual &amp; Demo Guide</div>
+          <div style="font-size:11px;color:#64748b;">Complete user manual with all screenshots, step-by-step testing guide, FAQ, and troubleshooting — 20+ pages.</div>
+        </div>
+        <a href="manual.pdf" download="TeamLifeline_Manual.pdf"
+          style="background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff;text-decoration:none;
+                 padding:10px 20px;border-radius:9px;font-size:12.5px;font-weight:800;white-space:nowrap;
+                 box-shadow:0 4px 14px rgba(99,102,241,.5);display:flex;align-items:center;gap:7px;flex-shrink:0;">
+          ⬇ Download PDF
+        </a>
       </div>
 
     </div><!-- /modal-body -->
 
-    <div class="how-modal-footer">
-      <span>Team Lifeline &bull; SPR High School, Kamareddy &bull; Demo v1.0</span>
-      <button onclick="closeHowModal()"
-        style="background:#1d4ed8;color:#fff;border:none;padding:7px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
-        Close Guide
-      </button>
+    <div class="how-modal-footer" style="justify-content:space-between;">
+      <span>Team Lifeline &bull; SPR High School, Kamareddy &bull; Demo v1.0 &bull; September 2026</span>
+      <button onclick="closeProjModal()" style="background:#059669;color:#fff;border:none;padding:7px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Close</button>
     </div>
 
   </div>
 </div>
 
 <script>
+  // ── How to Use modal ──
   function openHowModal()  { document.getElementById('how-modal-overlay').classList.add('open'); document.body.style.overflow='hidden'; }
   function closeHowModal() { document.getElementById('how-modal-overlay').classList.remove('open'); document.body.style.overflow=''; }
-  function handleOverlayClick(e) { if (e.target === document.getElementById('how-modal-overlay')) closeHowModal(); }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHowModal(); });
+
+  // ── Project Details modal ──
+  function openProjModal()  { document.getElementById('proj-modal-overlay').classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeProjModal() { document.getElementById('proj-modal-overlay').classList.remove('open'); document.body.style.overflow=''; }
+
+  // ── Overlay click closes whichever modal ──
+  function handleOverlayClick(e, overlayId) {
+    if (e.target.id === overlayId) {
+      if (overlayId === 'how-modal-overlay')  closeHowModal();
+      if (overlayId === 'proj-modal-overlay') closeProjModal();
+    }
+  }
+
+  // ── Escape key closes either open modal ──
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeHowModal(); closeProjModal(); }
+  });
 </script>
 
 <div class="logo-row">
