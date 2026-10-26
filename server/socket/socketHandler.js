@@ -105,7 +105,11 @@ function setupSocketIO(io) {
       const { caseId, landmarks, description } = payload;
       if (!caseId) return;
 
-      EmergencyCaseRepo.updateDriverSummary(caseId, { landmarks });
+      try {
+        EmergencyCaseRepo.updateDriverSummary(caseId, { landmarks });
+      } catch (err) {
+        console.error('[SOCKET ERROR] updateDriverSummary:', err.message);
+      }
       io.to(`case:${caseId}`).emit('EXTRA_DESC', { caseId, landmarks, description, timestamp: Date.now() });
       io.to('fleet_room').emit('EXTRA_DESC', { caseId, landmarks, description, timestamp: Date.now() });
     });

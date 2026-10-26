@@ -188,7 +188,8 @@ const EmergencyCaseRepo = {
     return this.getById(id);
   },
 
-  updateTelemetry(id, { lat, lng, speed = 0, heading = 0, etaSeconds = null, distanceKm = null, locationSource = 'simulated' }) {
+  updateTelemetry(id, params = {}) {
+    const { lat, lng, speed = 0, heading = 0, etaSeconds = null, distanceKm = null, locationSource = 'simulated' } = params;
     const db = getDatabase();
     const now = Date.now();
     const stmt = db.prepare(`
@@ -203,11 +204,12 @@ const EmergencyCaseRepo = {
         updated_at = ?
       WHERE id = ?
     `);
-    stmt.run(lat, lng, speed, heading, etaSeconds, distanceKm, locationSource, now, id);
+    stmt.run(lat !== undefined ? lat : null, lng !== undefined ? lng : null, speed !== undefined ? speed : 0, heading !== undefined ? heading : 0, etaSeconds !== undefined ? etaSeconds : null, distanceKm !== undefined ? distanceKm : null, locationSource !== undefined ? locationSource : 'simulated', now, id);
     return this.getById(id);
   },
 
-  updateDriverSummary(id, { driverSummary, incidentLocation, landmarks, victimCount }) {
+  updateDriverSummary(id, params = {}) {
+    const { driverSummary, incidentLocation, landmarks, victimCount } = params;
     const db = getDatabase();
     const now = Date.now();
     const stmt = db.prepare(`
@@ -219,7 +221,7 @@ const EmergencyCaseRepo = {
         updated_at = ?
       WHERE id = ?
     `);
-    stmt.run(driverSummary, incidentLocation, landmarks, victimCount, now, id);
+    stmt.run(driverSummary !== undefined ? driverSummary : null, incidentLocation !== undefined ? incidentLocation : null, landmarks !== undefined ? landmarks : null, victimCount !== undefined ? victimCount : null, now, id);
     return this.getById(id);
   }
 };

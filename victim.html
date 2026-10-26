@@ -118,6 +118,9 @@ html,body { height:100%; overflow:hidden; }
       <div class="badge badge-outline hide-mobile" id="case-badge" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;color:#94a3b8;">
         Case: <b id="case-id-display" style="color:#38bdf8;">EM-402</b>
       </div>
+      <button class="btn btn-amber" id="nav-otp-btn" onclick="openOtpModal()" style="font-size:11px;padding:4px 9px;background:#f59e0b;color:#0f172a;font-weight:800;border:none;border-radius:5px;cursor:pointer;">
+        🔐 Enter OTP
+      </button>
       <div class="badge badge-red" id="status-badge">
         <div class="dot dot-red"></div>
         <span id="status-text">Waiting…</span>
@@ -264,7 +267,8 @@ html,body { height:100%; overflow:hidden; }
 
 <!-- OTP Verification Modal (SMS Tracking Link) -->
 <div class="call-modal" id="otp-modal" style="display:none;z-index:9999;">
-  <div class="modal-box" style="max-width:400px;width:90%;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:24px;text-align:center;">
+  <div class="modal-box" style="max-width:400px;width:90%;background:#0f172a;border:2px solid #3b82f6;border-radius:12px;padding:24px;text-align:center;position:relative;box-shadow:0 10px 40px rgba(0,0,0,0.8);">
+    <button onclick="closeOtpModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">✕</button>
     <div style="font-size:40px;margin-bottom:10px;">🔐</div>
     <h3 style="font-size:18px;font-weight:700;color:#f8fafc;margin-bottom:6px;">Emergency Tracking Access</h3>
     <p style="font-size:12px;color:#94a3b8;margin-bottom:16px;">
