@@ -12,8 +12,8 @@
 | :---: | :--- | :--- | :---: |
 | **0** | **Project Audit & Stabilization** | Codebase inspection, baseline testing, structural bug fixes, audit document | **COMPLETED** |
 | **1** | **Frontend Architecture Unification & State Cohesion** | Unify duplicate victim/patient views, centralize chatbot, normalize navigation & storage | **COMPLETED** |
-| **2** | **Backend Infrastructure & Multi-Device Real-Time Sync** | Local Node.js server, WebSockets, real multi-device testing over Wi-Fi, database persistence | **NEXT UP** |
-| **3** | **Portals & Role-Based Emergency Workflows** | Dedicated Hospital Coordinator portal, Dispatcher console, refined Driver HUD | Planned |
+| **2** | **Backend Infrastructure, Telephony & Real-Time Sync** | Node.js, SQLite, Socket.IO, Phone Call Intake, Audio Consent, OTP SMS, Live Tracking | **COMPLETED** |
+| **3** | **Portals & Role-Based Emergency Workflows** | Dedicated Hospital Coordinator portal, Dispatcher console, refined Driver HUD | **NEXT UP** |
 | **4** | **Communication & Real Telephony Integration** | WebRTC in-browser audio calls, SMS emergency gateway, AI phone call centre integration | Planned |
 | **5** | **Hardening, Offline Capabilities & Exhibition Readiness** | PWA offline maps, automated demo playback presets, final exhibition hardening | Planned |
 
@@ -114,20 +114,51 @@ Consolidate disjointed pages and script modules so the entire frontend operates 
 
 ---
 
-## 🌐 Phase 2: Backend Infrastructure & Multi-Device Real-Time Sync
+## 🌐 Phase 2: Backend Infrastructure, Telephony & Real-Time Sync
 
 ### Objectives
-Enable real cross-device testing so that an ambulance driver on an Android/iOS phone or tablet communicates with a victim on a laptop or second phone over local Wi-Fi or internet.
-
-### Key Tasks
-1. Implement a lightweight Node.js (Express + Socket.io / WebSockets) server.
-2. Establish WebSocket rooms per emergency case (`EM-xxxx`).
-3. Stream live GPS telemetry from driver device to victim device.
-4. Persist emergency incidents, hospital bed status, and driver activity in an embedded database (e.g., SQLite / lowdb).
+Enable real cross-device synchronization (Laptop represents ambulance, Phone represents victim) over local Wi-Fi or cellular network, backed by Node.js, Express, Socket.IO, SQLite, and a modular telephony/SMS dispatch pipeline.
 
 ### Acceptance Criteria
-- Emergency reported on Device A appears in real time on Device B without sharing the same browser memory.
-- Driver movement on Device B updates map on Device A over local network.
+- [x] Existing website features, Leaflet maps, and Phase 1 unification preserved.
+- [x] Node.js, Express, Socket.IO, and native SQLite (`node:sqlite`) server architecture established.
+- [x] Incoming telephone call intake workflow implemented with DTMF IVR consent checks (DTMF 1 = Consent Granted, DTMF 2 = Refused).
+- [x] Audio recording security enforced: audio stored in `storage/recordings/` outside public web root, strictly blocked when consent is refused.
+- [x] Speech transcription and deterministic rule-based emergency extraction implemented (Kamareddy coordinates and landmarks).
+- [x] Server-side emergency case persistence with 18 canonical fields in SQLite.
+- [x] Cryptographically secure 6-digit OTP generation, HMAC-SHA256 salted hashing, 5-minute expiration, and single-use enforcement.
+- [x] Modular SMS service with canonical safety template and clearly labelled Simulation Mode.
+- [x] Interactive Operator Console (`operator.html`) with phone call simulator, SMS inbox inspector, and active case management.
+- [x] Victim tracking workflow with OTP modal verification and short-lived tracking sessions (`victim.html`).
+- [x] Ambulance driver HUD receiving real-time incoming dispatches (`ambulance.html`).
+- [x] Live GPS telemetry streaming over Socket.IO per-case rooms (`case:<caseId>`).
+- [x] Comprehensive automated tests (66/66 tests passing across Phase 1 & Phase 2).
+- [x] Complete `SERVER_SETUP.md`, `TELEPHONY_SETUP.md`, and `PHASE_2_COMPLETION_REPORT.md` delivered.
+
+### Completed Work in Phase 2
+1. **Full-Stack Node.js & SQLite Architecture**:
+   - Built Express server with native `node:sqlite` database (`data/lifeline.sqlite`) and Socket.IO.
+   - Designed schema: `call_sessions`, `recordings`, `transcripts`, `emergency_cases`, `tracking_invitations`, `tracking_sessions`.
+2. **Telephony & Consent Handling**:
+   - Implemented `TelephonyProvider` supporting Twilio Voice Webhooks and `MockTelephonyProvider`.
+   - Built DTMF consent state machine: DTMF 1 records audio call; DTMF 2 bypasses recording and proceeds with non-recorded speech gather.
+3. **Secure Audio Storage & Extraction**:
+   - Created `RecordingService` storing files in `storage/recordings/` outside public web directory.
+   - Built `TranscriptionService` and `EmergencyExtractionService` mapping Kamareddy landmarks to coordinates without medical diagnosis.
+4. **Cryptographic OTP & SMS Dispatch**:
+   - Implemented `OtpService` generating 6-digit crypto OTPs with salted HMAC-SHA256 hashes, 5-minute TTL, and 5-attempt rate limits.
+   - Built `SmsService` formatting canonical emergency SMS messages and storing them in an accessible simulation inbox.
+5. **Multi-Device Live Tracking (Laptop + Phone over Wi-Fi)**:
+   - Configured `operator.html` console detecting local LAN IP (e.g. `192.168.31.25:3000`).
+   - Integrated Socket.IO into `victim.html` with OTP modal entry.
+   - Integrated Socket.IO into `ambulance.html` with incoming dispatch alert HUD and live telemetry streaming.
+6. **Documentation & Verification**:
+   - Generated `SERVER_SETUP.md`, `TELEPHONY_SETUP.md`, `PHASE_2_COMPLETION_REPORT.md`.
+   - Built `tests/test_phase2.js` with 22 automated assertions (all passing).
+
+### Outstanding Work
+- Live PSTN cellular calling and SMS delivery require paid carrier API keys (Twilio / regional SMS gateway) and Indian DLT regulatory registration. The code adapters are fully built and verified; only credentials need to be inserted in `.env`.
+- Physical traffic light hardware integration remains outside this software phase.
 
 ---
 

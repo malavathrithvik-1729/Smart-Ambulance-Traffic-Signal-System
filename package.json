@@ -1,0 +1,24 @@
+{
+  "name": "smart-ambulance-traffic-signal-system",
+  "version": "2.0.0",
+  "description": "Smart Ambulance Traffic Signal System - Team Lifeline (SPR High School, Kamareddy)",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node tests/test_phase2.js && node tests/test_phase1.js"
+  },
+  "keywords": [
+    "ambulance",
+    "emergency-dispatch",
+    "telephony",
+    "traffic-signal",
+    "live-tracking"
+  ],
+  "author": "Team Lifeline",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}

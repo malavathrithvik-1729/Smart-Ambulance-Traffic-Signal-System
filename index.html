@@ -303,6 +303,9 @@
     <button class="sidebar-close-btn" onclick="toggleNavDrawer(false)" title="Close Navigation" style="display:flex;">✕</button>
   </div>
   <div class="nav-drawer-links">
+    <a href="operator.html" class="nav-drawer-link">
+      <span class="nav-icon">📞</span> <span>Call &amp; Dispatch Console</span>
+    </a>
     <a href="index.html" class="nav-drawer-link active">
       <span class="nav-icon">🚨</span> <span>Report Emergency</span>
     </a>
@@ -343,6 +346,9 @@
     <div class="nav-brand-title">🚑 Team Lifeline</div>
   </div>
   <div class="top-action-bar">
+    <a href="operator.html" class="top-btn" style="background:linear-gradient(135deg, #ef4444, #dc2626);color:#fff;" title="Open Call &amp; Dispatch Console">
+      📞 Dispatch Console
+    </a>
     <button class="top-btn btn-demo-pdf" onclick="openHowModal()" title="View Step-by-Step Demo &amp; Manual PDF">
       💡 Demo Steps
     </button>
@@ -706,12 +712,14 @@
   /* ── Enter Emergency ── */
   function enterEmergency() {
     const desc = document.getElementById('desc-input').value.trim();
+    const locName = userLat === 18.3312 ? 'NH-44 Highway Bypass, Kamareddy' : 'Reported GPS Location';
+
     if (typeof window !== 'undefined' && window.EmergencyStateManager && typeof window.EmergencyStateManager.createCase === 'function') {
       window.EmergencyStateManager.createCase({
         incidentDescription: desc,
         latitude: userLat,
         longitude: userLng,
-        incidentLocation: userLat === 18.3312 ? 'NH-44 Highway Bypass, Kamareddy' : 'Reported GPS Location'
+        incidentLocation: locName
       });
     } else {
       const data = { desc, lat: userLat, lng: userLng, ts: Date.now() };
@@ -720,6 +728,19 @@
       sessionStorage.setItem('em_lat', String(userLat));
       sessionStorage.setItem('em_lng', String(userLng));
     }
+
+    // Also register on server backend if running
+    fetch('/api/cases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        incidentDescription: desc,
+        latitude: userLat,
+        longitude: userLng,
+        incidentLocation: locName
+      })
+    }).catch(() => {});
+
     window.location.href = 'victim.html';
   }
 </script>

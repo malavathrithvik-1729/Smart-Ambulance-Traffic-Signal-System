@@ -262,6 +262,25 @@ html,body { height:100%; overflow:hidden; }
   </div>
 </div>
 
+<!-- OTP Verification Modal (SMS Tracking Link) -->
+<div class="call-modal" id="otp-modal" style="display:none;z-index:9999;">
+  <div class="modal-box" style="max-width:400px;width:90%;background:#0f172a;border:1px solid #334155;border-radius:12px;padding:24px;text-align:center;">
+    <div style="font-size:40px;margin-bottom:10px;">🔐</div>
+    <h3 style="font-size:18px;font-weight:700;color:#f8fafc;margin-bottom:6px;">Emergency Tracking Access</h3>
+    <p style="font-size:12px;color:#94a3b8;margin-bottom:16px;">
+      An emergency ambulance has been dispatched. Please enter the 6-digit OTP code sent to your phone via SMS to access live GPS tracking.
+    </p>
+    <div style="margin-bottom:16px;">
+      <input type="text" id="otp-input" maxlength="6" placeholder="• • • • • •" style="width:100%;text-align:center;font-size:24px;letter-spacing:8px;font-weight:800;padding:10px;background:#1e293b;border:2px solid #3b82f6;border-radius:8px;color:#f8fafc;box-sizing:border-box;">
+    </div>
+    <div id="otp-error" style="color:#ef4444;font-size:12px;margin-bottom:12px;display:none;"></div>
+    <button class="btn btn-green btn-full" id="btn-verify-otp" style="font-size:14px;padding:12px;" onclick="submitOtpVerification()">
+      🔓 Verify OTP &amp; Start Live Tracking
+    </button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="js/shared-state.js"></script>
 <script src="js/chatbot.js"></script>
@@ -329,10 +348,82 @@ const ambIcon = L.divIcon({
   className:'', iconSize:[36,36], iconAnchor:[18,18]
 });
 
-L.marker([victimLat,victimLng], {icon:victimIcon}).addTo(vMap).bindPopup(`<b>Emergency Scene</b><br>${activeCase.incidentDescription}`).openPopup();
+let sceneMarker = L.marker([victimLat,victimLng], {icon:victimIcon}).addTo(vMap).bindPopup(`<b>Emergency Scene</b><br>${activeCase.incidentDescription}`).openPopup();
 const ambMarker = L.marker(AMB_BASE, {icon:ambIcon}).addTo(vMap);
 
 let routeLine = null;
+
+/* ── OTP & SMS Invitation Workflow ── */
+const urlParams = new URLSearchParams(window.location.search);
+const inviteToken = urlParams.get('invite');
+
+function activateVictimSession(sessionToken, caseData) {
+  if (!caseData) return;
+  if (caseIdEl) caseIdEl.innerText = caseData.id || caseData.caseId || 'EM-402';
+  if (locTextEl) locTextEl.innerText = `${caseData.incident_location || caseData.incidentLocation || 'Kamareddy'} (${parseFloat(caseData.latitude).toFixed(4)}°N, ${parseFloat(caseData.longitude).toFixed(4)}°E)`;
+
+  const newLat = parseFloat(caseData.latitude);
+  const newLng = parseFloat(caseData.longitude);
+  if (!isNaN(newLat) && !isNaN(newLng)) {
+    sceneMarker.setLatLng([newLat, newLng]);
+    vMap.setView([newLat, newLng], 14);
+  }
+
+  // Sync with LifelineSync
+  if (window.LifelineSync) {
+    window.LifelineSync.joinCase(caseData.id || caseData.caseId, sessionToken, 'victim');
+  }
+}
+
+async function submitOtpVerification() {
+  const otpInput = document.getElementById('otp-input');
+  const otpVal = otpInput ? otpInput.value.trim() : '';
+  const errEl = document.getElementById('otp-error');
+  if (!otpVal || otpVal.length !== 6) {
+    errEl.innerText = 'Please enter a valid 6-digit OTP code.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/tracking/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: inviteToken, otp: otpVal })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      errEl.innerText = data.error || 'Verification failed. Please check your OTP.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    sessionStorage.setItem('victim_tracking_' + inviteToken, JSON.stringify({
+      sessionToken: data.sessionToken,
+      caseData: data.case
+    }));
+    document.getElementById('otp-modal').style.display = 'none';
+    activateVictimSession(data.sessionToken, data.case);
+  } catch (err) {
+    errEl.innerText = 'Network connection error: ' + err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+if (inviteToken) {
+  const cached = sessionStorage.getItem('victim_tracking_' + inviteToken);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      activateVictimSession(parsed.sessionToken, parsed.caseData);
+    } catch (_) {
+      document.getElementById('otp-modal').style.display = 'flex';
+    }
+  } else {
+    document.getElementById('otp-modal').style.display = 'flex';
+  }
+}
 
 /* ── Canonical Real-Time Sync (LifelineSync) ── */
 function handleMsg(msg) {
@@ -365,14 +456,18 @@ function handleMsg(msg) {
       if (Array.isArray(msg.pos) && msg.pos.length === 2) {
         const [lat, lng] = msg.pos;
         ambMarker.setLatLng([lat, lng]);
+      } else if (msg.lat !== undefined && msg.lng !== undefined) {
+        ambMarker.setLatLng([msg.lat, msg.lng]);
       }
-      if (msg.eta) {
-        document.getElementById('v-eta').innerText = msg.eta;
-        document.getElementById('hud-eta').innerText = msg.eta;
+      if (msg.eta || msg.etaSeconds) {
+        const etaText = msg.eta || (Math.ceil(msg.etaSeconds / 60) + ' min');
+        document.getElementById('v-eta').innerText = etaText;
+        document.getElementById('hud-eta').innerText = etaText;
       }
-      if (msg.dist) {
-        document.getElementById('v-dist').innerText = msg.dist;
-        document.getElementById('hud-dist').innerText = msg.dist;
+      if (msg.dist || msg.distanceKm) {
+        const distText = msg.dist || (parseFloat(msg.distanceKm).toFixed(1) + ' km');
+        document.getElementById('v-dist').innerText = distText;
+        document.getElementById('hud-dist').innerText = distText;
       }
       break;
     }

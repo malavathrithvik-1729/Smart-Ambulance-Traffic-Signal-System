@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Call & Dispatch Console — Team Lifeline V2</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/em.css">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --accent-red: #ef4444;
+      --accent-green: #10b981;
+      --accent-blue: #3b82f6;
+      --accent-yellow: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+
+    .op-header {
+      background: #090d16;
+      border-bottom: 1px solid var(--card-border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .op-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .op-brand i {
+      font-size: 1.8rem;
+      color: var(--accent-red);
+    }
+
+    .op-brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .op-brand-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .op-nav-links {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .op-nav-btn {
+      background: var(--card-bg);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .op-nav-btn:hover {
+      background: #2d3748;
+      border-color: var(--accent-blue);
+    }
+
+    .op-container {
+      max-width: 1400px;
+      margin: 1.5rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .op-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .op-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    .op-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .op-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-green { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .badge-red { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .badge-blue { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .badge-yellow { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-control {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .btn {
+      background: var(--accent-red);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: #dc2626;
+    }
+
+    .btn-blue {
+      background: var(--accent-blue);
+    }
+    .btn-blue:hover {
+      background: #2563eb;
+    }
+
+    .log-terminal {
+      background: #0b0f19;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+      max-height: 250px;
+      overflow-y: auto;
+      color: #38bdf8;
+    }
+
+    .sms-box {
+      background: #111827;
+      border: 1px dashed #374151;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+
+    .otp-code {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: var(--accent-yellow);
+      background: #1f2937;
+      padding: 0.3rem 0.8rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .link-box {
+      background: #0f172a;
+      padding: 0.5rem;
+      border-radius: 4px;
+      word-break: break-all;
+      font-size: 0.85rem;
+      color: #60a5fa;
+      margin: 0.5rem 0;
+    }
+
+    .case-card {
+      background: #111827;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 0.85rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .case-card-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="op-header">
+    <div class="op-brand">
+      <i class="fa-solid fa-truck-medical"></i>
+      <div>
+        <div class="op-brand-title">TEAM LIFELINE — EMERGENCY DISPATCH CONSOLE</div>
+        <div class="op-brand-sub">SPR High School, Kamareddy • Full-Stack V2 Dispatcher</div>
+      </div>
+    </div>
+    <div class="op-nav-links">
+      <span id="socket-status" class="badge badge-green"><i class="fa-solid fa-circle"></i> Connected</span>
+      <a href="ambulance.html" target="_blank" class="op-nav-btn"><i class="fa-solid fa-laptop"></i> Ambulance HUD</a>
+      <a href="victim.html" target="_blank" class="op-nav-btn"><i class="fa-solid fa-mobile-screen"></i> Victim Portal</a>
+      <a href="emergency.html" target="_blank" class="op-nav-btn"><i class="fa-solid fa-table-columns"></i> Exhibition Split</a>
+    </div>
+  </header>
+
+  <main class="op-container">
+
+    <!-- LEFT COLUMN: CALL INTAKE & SIMULATOR -->
+    <section>
+      <!-- NETWORK CONNECTION BOX -->
+      <div class="op-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent-blue);">
+        <div class="op-card-header">
+          <div class="op-card-title"><i class="fa-solid fa-wifi text-blue-400"></i> Local Wi-Fi Multi-Device Setup</div>
+          <span class="badge badge-blue">Wi-Fi Demonstration</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0;">
+          Connect your test smartphone to the <strong>same Wi-Fi network</strong> as this laptop. Open this URL on your phone to simulate the victim:
+        </p>
+        <div class="link-box" id="phone-url-display">Loading local network address...</div>
+        <div style="font-size: 0.8rem; color: #94a3b8; display: flex; gap: 10px;">
+          <span><strong>Laptop URL:</strong> <a href="/ambulance.html" target="_blank" style="color:#38bdf8;">http://localhost:3000/ambulance.html</a></span>
+        </div>
+      </div>
+
+      <!-- CALL INTAKE SIMULATOR -->
+      <div class="op-card">
+        <div class="op-card-header">
+          <div class="op-card-title"><i class="fa-solid fa-phone-volume" style="color: var(--accent-red);"></i> Emergency Phone Call Simulator</div>
+          <span class="badge badge-yellow" id="mode-badge">Simulation Mode</span>
+        </div>
+
+        <form id="call-sim-form">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label for="caller-name">Caller Name</label>
+              <input type="text" id="caller-name" class="form-control" value="Ramesh Kumar (Bystander)">
+            </div>
+            <div class="form-group">
+              <label for="caller-contact">Caller Phone Number</label>
+              <input type="tel" id="caller-contact" class="form-control" value="+919876543210">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="scenario-preset">Emergency Scenario Preset</label>
+            <select id="scenario-preset" class="form-control">
+              <option value="Car accident on NH44 highway near Kamareddy Clock Tower, two people injured, bleeding heavily! Please send an ambulance immediately.">🚨 NH44 Highway Collision near Clock Tower (2 Victims, Bleeding)</option>
+              <option value="Severe cardiac chest pain near Municipal Park Kamareddy, elderly patient is conscious but breathless.">🫀 Cardiac Emergency near Municipal Park (1 Victim, Critical)</option>
+              <option value="Student fell from first floor at SPR High School Kamareddy, suspected leg fracture, bleeding from arm.">🏫 Fall Trauma at SPR High School (1 Victim, Fracture)</option>
+              <option value="custom">✍️ Custom Call Scenario (Enter Below)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="scenario-text">Call Transcript / Speech Input</label>
+            <textarea id="scenario-text" class="form-control" rows="3">Car accident on NH44 highway near Kamareddy Clock Tower, two people injured, bleeding heavily! Please send an ambulance immediately.</textarea>
+          </div>
+
+          <div class="form-group" style="background: #111827; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--card-border);">
+            <label style="margin-bottom: 0.25rem; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="consent-toggle" checked style="width: 18px; height: 18px;">
+              <span><strong>Caller Recording Consent Granted</strong> (Audio recording and speech analysis authorized)</span>
+            </label>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-left: 26px;">
+              If unchecked, caller refuses recording; system will proceed with non-recorded intake per privacy policy.
+            </div>
+          </div>
+
+          <button type="submit" id="btn-simulate-call" class="btn">
+            <i class="fa-solid fa-phone-flip"></i> Dispatch Simulated Emergency Call
+          </button>
+        </form>
+
+        <!-- Pipeline Progress Logs -->
+        <div style="margin-top: 1rem;">
+          <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">DISPATCH PIPELINE EXECUTION LOG</label>
+          <div id="sim-log" class="log-terminal">System ready. Waiting for incoming call or test dispatch...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: SMS OTP INSPECTOR & ACTIVE CASES -->
+    <section>
+      <!-- SMS & OTP INSPECTOR -->
+      <div class="op-card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent-yellow);">
+        <div class="op-card-header">
+          <div class="op-card-title"><i class="fa-solid fa-comment-sms text-yellow-400"></i> SMS Dispatch & OTP Inspector</div>
+          <span class="badge badge-green" id="sms-status-badge">Simulator Ready</span>
+        </div>
+
+        <div id="latest-sms-container">
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">
+            When a call is dispatched, the simulated carrier SMS will be captured here with the tracking URL and 6-digit OTP code for instant testing.
+          </p>
+        </div>
+      </div>
+
+      <!-- ACTIVE CASES LIST -->
+      <div class="op-card">
+        <div class="op-card-header">
+          <div class="op-card-title"><i class="fa-solid fa-list-check"></i> Registered Emergency Cases (SQLite)</div>
+          <button id="btn-refresh-cases" class="op-nav-btn" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+
+        <div id="cases-list-container" style="max-height: 400px; overflow-y: auto;">
+          <p style="color: var(--text-muted); font-size: 0.85rem;">Loading registered cases...</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // DOM Elements
+    const socketStatus = document.getElementById('socket-status');
+    const phoneUrlDisplay = document.getElementById('phone-url-display');
+    const callSimForm = document.getElementById('call-sim-form');
+    const scenarioPreset = document.getElementById('scenario-preset');
+    const scenarioText = document.getElementById('scenario-text');
+    const consentToggle = document.getElementById('consent-toggle');
+    const simLog = document.getElementById('sim-log');
+    const latestSmsContainer = document.getElementById('latest-sms-container');
+    const casesListContainer = document.getElementById('cases-list-container');
+    const btnRefreshCases = document.getElementById('btn-refresh-cases');
+
+    // Socket status updates
+    socket.on('connect', () => {
+      socketStatus.className = 'badge badge-green';
+      socketStatus.innerHTML = '<i class="fa-solid fa-circle"></i> Connected';
+      socket.emit('join_fleet');
+    });
+
+    socket.on('disconnect', () => {
+      socketStatus.className = 'badge badge-red';
+      socketStatus.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Disconnected';
+    });
+
+    socket.on('EMERGENCY_CREATED', (emCase) => {
+      logMessage(`[SOCKET] Broadcast received: New Case Created (${emCase.id})`);
+      loadCases();
+    });
+
+    socket.on('STATUS_UPDATED', (data) => {
+      logMessage(`[SOCKET] Case ${data.caseId} status updated: ${data.status}`);
+      loadCases();
+    });
+
+    function logMessage(msg) {
+      const time = new Date().toLocaleTimeString();
+      simLog.innerHTML += `\n[${time}] ${msg}`;
+      simLog.scrollTop = simLog.scrollHeight;
+    }
+
+    // Load server status & local IP
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/operator/status');
+        const data = await res.json();
+        if (data.success && data.network) {
+          phoneUrlDisplay.innerHTML = `
+            <strong>Phone Tracking URL:</strong>
+            <a href="${data.network.phoneUrl}" target="_blank" style="color: #60a5fa; text-decoration: underline;">
+              ${data.network.phoneUrl}
+            </a>
+          `;
+        }
+      } catch (err) {
+        phoneUrlDisplay.innerText = 'Could not fetch local IP. Ensure server is running on port 3000.';
+      }
+    }
+
+    // Preset selector
+    scenarioPreset.addEventListener('change', () => {
+      if (scenarioPreset.value !== 'custom') {
+        scenarioText.value = scenarioPreset.value;
+      }
+    });
+
+    // Simulate Call Form Submit
+    callSimForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const callerName = document.getElementById('caller-name').value;
+      const callerContact = document.getElementById('caller-contact').value;
+      const text = scenarioText.value;
+      const consentGranted = consentToggle.checked;
+
+      simLog.innerHTML = `Starting simulated telephone call pipeline...`;
+      logMessage(`1. Caller: ${callerName} (${callerContact})`);
+      logMessage(`2. Consent state: ${consentGranted ? 'GRANTED' : 'REFUSED'}`);
+
+      try {
+        const res = await fetch('/api/telephony/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            callerName,
+            callerContact,
+            scenarioText: text,
+            consentGranted,
+            ambulanceId: 'AMB-01'
+          })
+        });
+
+        const result = await res.json();
+        if (!result.success) {
+          throw new Error(result.error || 'Simulation failed');
+        }
+
+        logMessage(`3. Call Session created: ${result.callSession.id}`);
+        if (result.recording) {
+          logMessage(`4. Audio Recording stored: ${result.recording.id} (WAV)`);
+        } else {
+          logMessage(`4. Audio Recording bypassed per caller refusal`);
+        }
+        logMessage(`5. AI Extracted: ${result.extracted.incidentType} (${result.extracted.severity.toUpperCase()}) at ${result.extracted.incidentLocation}`);
+        logMessage(`6. Emergency Case saved in SQLite: ${result.emergencyCase.id}`);
+        logMessage(`7. SMS with OTP dispatched: OTP = ${result.sms.otp}`);
+
+        displaySmsResult(result);
+        loadCases();
+
+      } catch (err) {
+        logMessage(`ERROR: ${err.message}`);
+      }
+    });
+
+    function displaySmsResult(result) {
+      const sms = result.sms;
+      const emCase = result.emergencyCase;
+
+      latestSmsContainer.innerHTML = `
+        <div class="sms-box">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.8rem; color: #a78bfa;"><i class="fa-solid fa-sim-card"></i> Recipient: ${sms.to}</span>
+            <span class="badge badge-yellow">SIMULATED SMS</span>
+          </div>
+
+          <div style="margin: 0.5rem 0;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">VERIFICATION OTP (6-DIGIT CODE):</div>
+            <div class="otp-code">${sms.otp}</div>
+          </div>
+
+          <div style="margin-top: 0.5rem;">
+            <div style="font-size: 0.75rem; color: var(--text-muted);">SMS MESSAGE BODY:</div>
+            <p style="font-size: 0.85rem; background: #0f172a; padding: 0.5rem; border-radius: 4px; margin: 4px 0;">
+              ${sms.message}
+            </p>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 0.75rem;">
+            <a href="${sms.trackingUrl}" target="_blank" class="op-nav-btn" style="flex: 1; justify-content: center; background: #2563eb;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Victim Tracking Link
+            </a>
+            <a href="/ambulance.html?case=${emCase.id}" target="_blank" class="op-nav-btn" style="flex: 1; justify-content: center; background: #dc2626;">
+              <i class="fa-solid fa-truck-medical"></i> Open Ambulance HUD
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    // Load active cases from SQLite
+    async function loadCases() {
+      try {
+        const res = await fetch('/api/cases');
+        const data = await res.json();
+        if (!data.success || !data.cases || data.cases.length === 0) {
+          casesListContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">No active emergency cases in database. Run a simulation call above!</p>';
+          return;
+        }
+
+        casesListContainer.innerHTML = data.cases.map(c => `
+          <div class="case-card">
+            <div class="case-card-header">
+              <span style="font-weight: 700; color: #38bdf8;">${c.id}</span>
+              <span class="badge ${c.status === 'en_route' ? 'badge-yellow' : c.status === 'arrived' ? 'badge-green' : 'badge-blue'}">${c.status.toUpperCase()}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: #e2e8f0; margin-bottom: 4px;">
+              <strong>${c.incident_location}</strong> ${c.landmarks ? '• ' + c.landmarks : ''}
+            </div>
+            <div style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 6px;">
+              ${c.driver_summary || c.incident_description}
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem;">
+              <span>Victims: <strong>${c.victim_count}</strong> | Contact: ${c.caller_contact || 'N/A'}</span>
+              <a href="/ambulance.html?case=${c.id}" target="_blank" style="color: #f87171; text-decoration: underline;">
+                Driver View →
+              </a>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        casesListContainer.innerHTML = `<p style="color: var(--accent-red); font-size: 0.85rem;">Failed to load cases: ${err.message}</p>`;
+      }
+    }
+
+    btnRefreshCases.addEventListener('click', loadCases);
+
+    // Initial load
+    loadStatus();
+    loadCases();
+  </script>
+</body>
+</html>

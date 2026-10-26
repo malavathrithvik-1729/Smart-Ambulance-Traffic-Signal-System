@@ -205,6 +205,8 @@
       this.processedMsgIds = new Set();
       this.listeners = [];
       this.channel = null;
+      this.socket = null;
+      this.currentCaseId = null;
 
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         try {
@@ -223,6 +225,49 @@
               this._handleIncoming(msg);
             } catch (_) {}
           }
+        });
+
+        // Initialize Socket.IO connection if client script is loaded
+        if (typeof window.io === 'function') {
+          try {
+            this.socket = window.io();
+            this._initSocketListeners();
+          } catch (_) {}
+        } else {
+          // Check again after DOM loads if socket.io is deferred
+          window.addEventListener('DOMContentLoaded', () => {
+            if (typeof window.io === 'function' && !this.socket) {
+              try {
+                this.socket = window.io();
+                this._initSocketListeners();
+              } catch (_) {}
+            }
+          });
+        }
+      }
+    }
+
+    _initSocketListeners() {
+      if (!this.socket) return;
+      const events = ['POSITION', 'JOURNEY_START', 'ARRIVED_SCENE', 'EXTRA_DESC', 'STATUS_UPDATED', 'EMERGENCY_CREATED'];
+      events.forEach((evt) => {
+        this.socket.on(evt, (data) => {
+          this._handleIncoming({ ...(data && typeof data === 'object' ? data : {}), type: evt });
+        });
+      });
+    }
+
+    setCaseId(caseId) {
+      this.currentCaseId = caseId;
+    }
+
+    joinCase(caseId, trackingToken = null, role = 'victim') {
+      this.currentCaseId = caseId;
+      if (this.socket && this.socket.connected) {
+        this.socket.emit('join_case', { caseId, trackingToken, role });
+      } else if (this.socket) {
+        this.socket.on('connect', () => {
+          this.socket.emit('join_case', { caseId, trackingToken, role });
         });
       }
     }
@@ -290,6 +335,35 @@
       if (typeof window !== 'undefined' && window.localStorage) {
         try {
           window.localStorage.setItem(STORAGE_MSG_KEY, JSON.stringify(msg));
+        } catch (_) {}
+      }
+
+      // Relay to Socket.IO backend if connected
+      if (this.socket && this.socket.connected) {
+        try {
+          const caseId = (payloadData && payloadData.caseId) || this.currentCaseId || 'EM-402';
+          if (type === 'POSITION') {
+            const lat = Array.isArray(payloadData.pos) ? payloadData.pos[0] : payloadData.lat;
+            const lng = Array.isArray(payloadData.pos) ? payloadData.pos[1] : payloadData.lng;
+            this.socket.emit('ambulance_telemetry', {
+              caseId,
+              lat,
+              lng,
+              etaSeconds: payloadData.etaSeconds,
+              distanceKm: payloadData.distanceKm,
+              locationSource: payloadData.locationSource || 'simulated'
+            });
+          } else if (type === 'JOURNEY_START') {
+            this.socket.emit('start_journey', { caseId });
+          } else if (type === 'ARRIVED_SCENE') {
+            this.socket.emit('mark_arrived', { caseId });
+          } else if (type === 'EXTRA_DESC') {
+            this.socket.emit('extra_landmark', {
+              caseId,
+              landmarks: payloadData.val || payloadData.landmarks,
+              description: payloadData.val
+            });
+          }
         } catch (_) {}
       }
     }
