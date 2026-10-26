@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Emergency Help | Team Lifeline</title>
+<title>Victim &amp; Patient Emergency Portal | Team Lifeline</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link rel="stylesheet" href="css/em.css">
 <style>
@@ -97,23 +97,33 @@ html,body { height:100%; overflow:hidden; }
   align-items:center; justify-content:center;
 }
 .call-modal.show { display:flex; }
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+}
 </style>
 </head>
 <body>
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
 <div class="page">
 
   <!-- Top bar -->
   <header class="top-bar">
-    <div class="top-brand">🚨 Team Lifeline &mdash; Emergency Help</div>
-    <div style="display:flex;gap:10px;align-items:center;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="btn-sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle Sidebar Controls">
+        <span>☰</span> <span>Info &amp; Chat</span>
+      </button>
+      <div class="top-brand">🚨 Team Lifeline <span style="font-weight:400;opacity:0.8;font-size:12px;" class="hide-mobile">— Victim &amp; Patient Portal</span></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <div class="badge badge-outline hide-mobile" id="case-badge" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;color:#94a3b8;">
+        Case: <b id="case-id-display" style="color:#38bdf8;">EM-402</b>
+      </div>
       <div class="badge badge-red" id="status-badge">
         <div class="dot dot-red"></div>
-        <span id="status-text">Waiting for ambulance…</span>
+        <span id="status-text">Waiting…</span>
       </div>
-    </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <a href="ambulance.html" target="_blank" class="btn btn-outline" style="font-size:11px;padding:5px 10px;">🚑 Driver Opens This →</a>
-      <div style="font-size:11px;color:var(--muted);">📱 Victim Dashboard</div>
+      <a href="ambulance.html" target="_blank" class="btn btn-outline hide-mobile" style="font-size:11px;padding:4px 8px;">🚑 Driver Portal ↗</a>
+      <a href="index.html" class="btn btn-outline" style="font-size:11px;padding:4px 8px;">🏠 Home</a>
     </div>
   </header>
 
@@ -121,6 +131,12 @@ html,body { height:100%; overflow:hidden; }
 
     <!-- Sidebar -->
     <aside class="sidebar">
+
+      <!-- Sidebar Header for Mobile Drawer -->
+      <div class="sidebar-header">
+        <div class="sidebar-title">🚨 Emergency Status &amp; First-Aid</div>
+        <button class="sidebar-close-btn" onclick="toggleSidebar(false)" title="Close Sidebar">✕</button>
+      </div>
 
       <!-- Ambulance tracking card -->
       <div class="card" style="border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.05);">
@@ -184,11 +200,17 @@ html,body { height:100%; overflow:hidden; }
         <div class="quick-btns">
           <button class="q-btn" onclick="askAI('bleeding')">🩸 Bleeding</button>
           <button class="q-btn" onclick="askAI('unconscious')">🫀 Unconscious</button>
+          <button class="q-btn" onclick="askAI('cpr')">⚡ CPR</button>
           <button class="q-btn" onclick="askAI('fracture')">🦴 Fracture</button>
-          <button class="q-btn" onclick="askAI('crash')">🚗 Crash</button>
+          <button class="q-btn" onclick="askAI('car_crash')">🚗 Crash</button>
+          <button class="q-btn" onclick="askAI('burns')">🔥 Burns</button>
+          <button class="q-btn" onclick="askAI('choking')">🫁 Choking</button>
+        </div>
+        <div style="font-size:10px;color:#94a3b8;padding:5px 9px;background:rgba(0,0,0,0.35);border-top:1px solid var(--border);line-height:1.35;">
+          ⚠️ <b>Medical Notice:</b> Bystander first-aid guidance only. Does not replace emergency medical care. Call 108/112 in life-threatening emergencies.
         </div>
         <div class="chat-input-row">
-          <input type="text" class="input" id="chat-in" placeholder="Ask first-aid question…" style="font-size:12px;"
+          <input type="text" class="input" id="chat-in" placeholder="Ask first-aid question…" style="font-size:12px;" autocomplete="off"
             onkeydown="if(event.key==='Enter')sendChat()"/>
           <button class="btn btn-green" style="padding:6px 12px;font-size:12px;" onclick="sendChat()">Ask</button>
         </div>
@@ -210,6 +232,9 @@ html,body { height:100%; overflow:hidden; }
           <span id="hud-status" style="font-size:12px;color:#38bdf8;">Ambulance dispatched — waiting to start</span>
         </div>
       </div>
+      <button class="floating-sidebar-btn" onclick="toggleSidebar(true)">
+        💬 Status &amp; First-Aid
+      </button>
       <div id="victim-map" style="width:100%;height:100%;"></div>
     </div>
   </div>
@@ -238,18 +263,61 @@ html,body { height:100%; overflow:hidden; }
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/shared-state.js"></script>
+<script src="js/chatbot.js"></script>
 <script>
-/* ── Load case from localStorage ── */
-const caseRaw = localStorage.getItem('lifeline_em_case');
-const em = caseRaw ? JSON.parse(caseRaw) : { desc:'Emergency on NH-44 bypass', lat:18.3312, lng:78.3445 };
-const victimLat = parseFloat(em.lat);
-const victimLng = parseFloat(em.lng);
-const AMB_BASE  = [18.317987, 78.334956];
+/* ── Mobile Sidebar Drawer Controls ── */
+function toggleSidebar(forceState) {
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const isOpen = forceState !== undefined ? forceState : !sidebar.classList.contains('open');
+  if (isOpen) {
+    sidebar.classList.add('open');
+    if (backdrop) backdrop.classList.add('active');
+  } else {
+    sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('active');
+  }
+  setTimeout(() => {
+    if (window.vMap) window.vMap.invalidateSize();
+  }, 320);
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') toggleSidebar(false);
+});
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 860) {
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (backdrop) backdrop.classList.remove('active');
+  }
+  if (window.vMap) window.vMap.invalidateSize();
+});
 
-document.getElementById('v-loc-text').innerText = `${victimLat.toFixed(5)}°N, ${victimLng.toFixed(5)}°E`;
+/* ── Load case via EmergencyStateManager ── */
+const activeCase = (typeof window !== 'undefined' && window.EmergencyStateManager)
+  ? window.EmergencyStateManager.loadCase()
+  : { caseId: 'EM-402', incidentDescription: 'Emergency on NH-44 bypass', latitude: 18.3312, longitude: 78.3445, landmarks: '' };
+
+const victimLat = activeCase.latitude;
+const victimLng = activeCase.longitude;
+const AMB_BASE  = (activeCase.ambulanceLocation && activeCase.ambulanceLocation.lat)
+  ? [activeCase.ambulanceLocation.lat, activeCase.ambulanceLocation.lng]
+  : [18.317987, 78.334956];
+
+const caseIdEl = document.getElementById('case-id-display');
+if (caseIdEl) caseIdEl.innerText = activeCase.caseId || 'EM-402';
+
+const locTextEl = document.getElementById('v-loc-text');
+if (locTextEl) locTextEl.innerText = `${activeCase.incidentLocation || 'NH-44 Highway Bypass, Kamareddy'} (${victimLat.toFixed(4)}°N, ${victimLng.toFixed(4)}°E)`;
+
+const extraDescInput = document.getElementById('extra-desc');
+if (extraDescInput && activeCase.landmarks) {
+  extraDescInput.value = activeCase.landmarks;
+}
 
 /* ── Map ── */
 const vMap = L.map('victim-map', { zoomControl:false }).setView([victimLat,victimLng], 14);
+window.vMap = vMap;
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(vMap);
 
 const victimIcon = L.divIcon({
@@ -261,32 +329,24 @@ const ambIcon = L.divIcon({
   className:'', iconSize:[36,36], iconAnchor:[18,18]
 });
 
-L.marker([victimLat,victimLng], {icon:victimIcon}).addTo(vMap).bindPopup('<b>Your Location</b>').openPopup();
+L.marker([victimLat,victimLng], {icon:victimIcon}).addTo(vMap).bindPopup(`<b>Emergency Scene</b><br>${activeCase.incidentDescription}`).openPopup();
 const ambMarker = L.marker(AMB_BASE, {icon:ambIcon}).addTo(vMap);
 
 let routeLine = null;
 
-/* ── BroadcastChannel sync (receives from ambulance.html) ── */
-const BC = new BroadcastChannel('lifeline_em');
-// Also listen via storage event for cross-origin fallback
-window.addEventListener('storage', e => {
-  if (e.key === 'lifeline_em_msg' && e.newValue) {
-    try { handleMsg(JSON.parse(e.newValue)); } catch(_) {}
-  }
-});
-
-BC.onmessage = e => handleMsg(e.data);
-
+/* ── Canonical Real-Time Sync (LifelineSync) ── */
 function handleMsg(msg) {
+  if (!msg || typeof msg !== 'object') return;
   switch(msg.type) {
 
     case 'ROUTE_SELECTED': {
-      // Draw the selected route on victim map
       if (routeLine) vMap.removeLayer(routeLine);
-      const coords = msg.coords;  // [[lat,lng],...]
-      routeLine = L.polyline(coords, { color:'#10b981', weight:5, opacity:.85 }).addTo(vMap);
-      vMap.fitBounds(L.latLngBounds(coords), { padding:[40,40] });
-      document.getElementById('hud-status').innerText = `Route selected — waiting for driver to start`;
+      const coords = msg.coords;
+      if (Array.isArray(coords) && coords.length > 0) {
+        routeLine = L.polyline(coords, { color:'#10b981', weight:5, opacity:.85 }).addTo(vMap);
+        vMap.fitBounds(L.latLngBounds(coords), { padding:[40,40] });
+        document.getElementById('hud-status').innerText = `Corridor selected — ambulance preparing to roll`;
+      }
       break;
     }
 
@@ -302,12 +362,18 @@ function handleMsg(msg) {
     }
 
     case 'POSITION': {
-      const [lat, lng] = msg.pos;
-      ambMarker.setLatLng([lat, lng]);
-      document.getElementById('v-eta').innerText  = msg.eta;
-      document.getElementById('v-dist').innerText = msg.dist;
-      document.getElementById('hud-eta').innerText  = msg.eta;
-      document.getElementById('hud-dist').innerText = msg.dist;
+      if (Array.isArray(msg.pos) && msg.pos.length === 2) {
+        const [lat, lng] = msg.pos;
+        ambMarker.setLatLng([lat, lng]);
+      }
+      if (msg.eta) {
+        document.getElementById('v-eta').innerText = msg.eta;
+        document.getElementById('hud-eta').innerText = msg.eta;
+      }
+      if (msg.dist) {
+        document.getElementById('v-dist').innerText = msg.dist;
+        document.getElementById('hud-dist').innerText = msg.dist;
+      }
       break;
     }
 
@@ -320,22 +386,48 @@ function handleMsg(msg) {
     }
 
     case 'EXTRA_DESC': {
-      // Driver sent us a message back
-      addMsg(`🚑 Driver: "${msg.val}"`, 'bot');
+      if (msg.val && msg.sender !== 'VICTIM') {
+        if (chatbot) chatbot.addBotMessage(`🚑 <b>Ambulance Team</b>: "${msg.val}"`);
+      }
       break;
     }
   }
 }
 
+// Subscribe to LifelineSync or direct BroadcastChannel fallback
+if (typeof window !== 'undefined' && window.LifelineSync) {
+  window.LifelineSync.subscribe(handleMsg);
+} else if ('BroadcastChannel' in window) {
+  const BC = new BroadcastChannel('lifeline_em');
+  BC.onmessage = e => handleMsg(e.data);
+  window.addEventListener('storage', e => {
+    if (e.key === 'lifeline_em_msg' && e.newValue) {
+      try { handleMsg(JSON.parse(e.newValue)); } catch(_) {}
+    }
+  });
+}
+
 /* ── Send extra description to driver ── */
 function sendExtraDesc() {
-  const val = document.getElementById('extra-desc').value.trim();
+  const input = document.getElementById('extra-desc');
+  const val = input ? input.value.trim() : '';
   if (!val) return;
-  document.getElementById('desc-sent').style.display = 'block';
-  setTimeout(() => document.getElementById('desc-sent').style.display = 'none', 4000);
-  const payload = { type:'EXTRA_DESC', val };
-  BC.postMessage(payload);
-  localStorage.setItem('lifeline_em_msg', JSON.stringify({ ...payload, _ts: Date.now() }));
+
+  const confirmEl = document.getElementById('desc-sent');
+  if (confirmEl) {
+    confirmEl.style.display = 'block';
+    setTimeout(() => confirmEl.style.display = 'none', 4000);
+  }
+
+  // Update shared state
+  if (window.EmergencyStateManager) {
+    window.EmergencyStateManager.updateCase({ landmarks: val, extraNotes: val });
+  }
+
+  // Send via LifelineSync
+  if (window.LifelineSync) {
+    window.LifelineSync.send('EXTRA_DESC', { val, sender: 'VICTIM' });
+  }
 }
 
 /* ── Call driver ── */
@@ -356,43 +448,56 @@ function closeCall() {
   document.getElementById('call-modal').classList.remove('show');
 }
 
-/* ── Chatbot ── */
-const AI = {
-  bleeding:`<b>Severe Bleeding:</b><br>1. Press a clean cloth FIRMLY — do not lift to check.<br>2. Add more cloth if soaked through.<br>3. Raise limb above heart level if no fracture.<br>4. Keep patient lying down and warm.`,
-  unconscious:`<b>Unconscious Person:</b><br>1. Check breathing — look for chest rise (5 seconds).<br>2. If breathing: Recovery Position (roll on side).<br>3. If NOT breathing: start CPR — 30 chest compressions, 2 rescue breaths.<br>4. Never give water.`,
-  fracture:`<b>Broken Bone:</b><br>1. Do NOT move or straighten the limb.<br>2. Support with rolled clothing or jacket.<br>3. If skin is broken, cover with clean cloth.`,
-  crash:`<b>Car Crash:</b><br>1. Warn approaching vehicles — keep people back.<br>2. Switch off ignition if safely reachable.<br>3. Do NOT move victims unless vehicle is on fire.<br>4. Reassure: "Help is on the way."`
-};
+/* ── Centralized Chatbot Initialization ── */
+let chatbot = null;
+if (typeof window !== 'undefined' && window.FirstAidChatbot) {
+  chatbot = new window.FirstAidChatbot('chat-log');
+  chatbot.init();
+} else {
+  // Graceful inline fallback
+  const log = document.getElementById('chat-log');
+  if (log) {
+    log.innerHTML = `<div class="chat-msg bot">Hello! I am the <b>Lifeline First-Aid Assistant</b>.<br>Ambulance is dispatched. Ask me anything about first aid.</div>`;
+  }
+}
+
+function askAI(topicKey) {
+  if (chatbot && typeof chatbot.renderTopic === 'function') {
+    chatbot.renderTopic(topicKey);
+  } else if (window.FIRST_AID_KNOWLEDGE && window.FIRST_AID_KNOWLEDGE[topicKey]) {
+    const item = window.FIRST_AID_KNOWLEDGE[topicKey];
+    addMsg(`Tell me about: ${item.title}`, 'user');
+    setTimeout(() => addMsg(`<b>${item.title}</b><br><br>${item.steps.join('<br><br>')}`, 'bot'), 300);
+  }
+}
+
+function sendChat() {
+  const inp = document.getElementById('chat-in');
+  const q = inp ? inp.value.trim() : '';
+  if (!q) return;
+  inp.value = '';
+
+  if (chatbot && typeof chatbot.handleUserQuery === 'function') {
+    chatbot.handleUserQuery(q);
+  } else {
+    addMsg(q, 'user');
+    let ans = 'Ambulance is on its way. Keep the casualty calm, warm, and resting.';
+    if (window.findFirstAidTopic) {
+      const matched = window.findFirstAidTopic(q);
+      if (matched) ans = `<b>${matched.title}</b><br><br>${matched.steps.join('<br><br>')}`;
+    }
+    setTimeout(() => addMsg(ans, 'bot'), 300);
+  }
+}
 
 function addMsg(html, who) {
   const log = document.getElementById('chat-log');
+  if (!log) return;
   const d = document.createElement('div');
   d.className = `chat-msg ${who}`;
   d.innerHTML = html;
   log.appendChild(d);
   log.scrollTop = log.scrollHeight;
-}
-
-addMsg(`Hello! I am the <b>Lifeline First-Aid Assistant</b>.<br>Ambulance is dispatched. Ask me anything about first aid.`, 'bot');
-
-function askAI(topic) {
-  const labels = {bleeding:'Bleeding',unconscious:'Unconscious person',fracture:'Broken bone',crash:'Car crash'};
-  addMsg(labels[topic]+' — what should I do?','user');
-  setTimeout(()=>addMsg(AI[topic]||'Keep patient calm and still.','bot'),380);
-}
-function sendChat() {
-  const inp = document.getElementById('chat-in');
-  const q = inp.value.trim();
-  if(!q) return;
-  inp.value = '';
-  addMsg(q,'user');
-  const ql = q.toLowerCase();
-  let ans = 'Ambulance is almost there. Keep the patient calm, still, and warm.';
-  if(ql.includes('bleed')) ans=AI.bleeding;
-  else if(ql.includes('unconsci')||ql.includes('breath')||ql.includes('cpr')) ans=AI.unconscious;
-  else if(ql.includes('fractur')||ql.includes('bone')||ql.includes('broken')) ans=AI.fracture;
-  else if(ql.includes('crash')||ql.includes('smoke')||ql.includes('fire')) ans=AI.crash;
-  setTimeout(()=>addMsg(ans,'bot'),380);
 }
 
 function speak(text) {

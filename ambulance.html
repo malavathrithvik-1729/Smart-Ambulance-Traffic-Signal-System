@@ -68,30 +68,49 @@ html,body { height:100%; overflow:hidden; }
   align-items:center; justify-content:center;
 }
 .call-modal.show { display:flex; }
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+}
 </style>
 </head>
 <body>
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
 <div class="page">
 
   <!-- Top Bar -->
   <header class="top-bar">
-    <div class="top-brand">🚑 Team Lifeline &mdash; Ambulance Driver</div>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <div class="badge badge-green">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="btn-sidebar-toggle" onclick="toggleSidebar()" aria-label="Toggle Sidebar Controls">
+        <span>☰</span> <span>Controls</span>
+      </button>
+      <div class="top-brand">🚑 Team Lifeline <span style="font-weight:400;opacity:0.8;font-size:12px;" class="hide-mobile">— Ambulance Driver</span></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <div class="badge badge-outline hide-mobile" id="case-badge" style="font-size:11px;padding:3px 8px;border:1px solid var(--border);border-radius:5px;color:#94a3b8;">
+        Case: <b id="case-id-display" style="color:#38bdf8;">EM-402</b>
+      </div>
+      <div class="badge badge-green hide-mobile">
         <div class="dot dot-green"></div>
-        <span>Victim Dashboard Synced</span>
+        <span>Victim Synced</span>
       </div>
       <div class="badge badge-amber">
         <span id="tb-status">Selecting route…</span>
       </div>
+      <a href="victim.html" target="_blank" class="btn btn-outline hide-mobile" style="font-size:11px;padding:4px 9px;">📱 Victim View ↗</a>
+      <a href="index.html" class="btn btn-outline" style="font-size:11px;padding:4px 9px;">🏠 Home</a>
     </div>
-    <div style="font-size:11px;color:var(--muted);">🚑 Driver Dashboard</div>
   </header>
 
   <div class="main">
 
     <!-- Sidebar -->
     <aside class="sidebar">
+
+      <!-- Sidebar Header for Mobile Drawer -->
+      <div class="sidebar-header">
+        <div class="sidebar-title">🚑 Driver Controls &amp; Status</div>
+        <button class="sidebar-close-btn" onclick="toggleSidebar(false)" title="Close Sidebar">✕</button>
+      </div>
 
       <!-- Incident -->
       <div class="card" style="border-color:rgba(239,68,68,.4);">
@@ -206,6 +225,9 @@ html,body { height:100%; overflow:hidden; }
           </div>
         </div>
       </div>
+      <button class="floating-sidebar-btn" onclick="toggleSidebar(true)">
+        📋 Controls &amp; Route
+      </button>
       <div id="amb-map" style="width:100%;height:100%;"></div>
     </div>
   </div>
@@ -223,17 +245,53 @@ html,body { height:100%; overflow:hidden; }
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="js/shared-state.js"></script>
 <script>
+/* ── Mobile Sidebar Drawer Controls ── */
+function toggleSidebar(forceState) {
+  const sidebar = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const isOpen = forceState !== undefined ? forceState : !sidebar.classList.contains('open');
+  if (isOpen) {
+    sidebar.classList.add('open');
+    if (backdrop) backdrop.classList.add('active');
+  } else {
+    sidebar.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('active');
+  }
+  setTimeout(() => {
+    if (window.aMap) window.aMap.invalidateSize();
+  }, 320);
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') toggleSidebar(false);
+});
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 860) {
+    const backdrop = document.getElementById('sidebar-backdrop');
+    if (backdrop) backdrop.classList.remove('active');
+  }
+  if (window.aMap) window.aMap.invalidateSize();
+});
+
 /* ═══════════════════════════════════════════════
    LOAD CASE
 ═══════════════════════════════════════════════ */
-const caseRaw = localStorage.getItem('lifeline_em_case');
-const em = caseRaw ? JSON.parse(caseRaw) : { desc:'Emergency on NH-44 bypass', lat:18.3312, lng:78.3445 };
-const victimLat = parseFloat(em.lat);
-const victimLng = parseFloat(em.lng);
-const AMB_BASE  = [18.317987, 78.334956];
+const activeCase = (typeof window !== 'undefined' && window.EmergencyStateManager)
+  ? window.EmergencyStateManager.loadCase()
+  : { caseId: 'EM-402', incidentDescription: 'Emergency on NH-44 bypass', latitude: 18.3312, longitude: 78.3445, callerName: 'Suresh Reddy', callerContact: '+91 98480 23145' };
 
-document.getElementById('amb-desc').innerText = em.desc || 'Emergency incident';
+const victimLat = activeCase.latitude;
+const victimLng = activeCase.longitude;
+const AMB_BASE  = (activeCase.ambulanceLocation && activeCase.ambulanceLocation.lat)
+  ? [activeCase.ambulanceLocation.lat, activeCase.ambulanceLocation.lng]
+  : [18.317987, 78.334956];
+
+const caseIdEl = document.getElementById('case-id-display');
+if (caseIdEl) caseIdEl.innerText = activeCase.caseId || 'EM-402';
+
+const ambDescEl = document.getElementById('amb-desc');
+if (ambDescEl) ambDescEl.innerText = activeCase.incidentDescription || 'Emergency incident';
 
 const HOSPITALS = [
   { id:'H1', name:'Government Area Hospital, Kamareddy', lat:18.3280, lng:78.3310, icuBeds:6,  traumaOT:'READY', recommended:true  },
@@ -244,6 +302,7 @@ const HOSPITALS = [
    MAP
 ═══════════════════════════════════════════════ */
 const aMap = L.map('amb-map', { zoomControl:false }).setView([AMB_BASE[0], AMB_BASE[1]], 14);
+window.aMap = aMap;
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(aMap);
 
 const victimIcon = L.divIcon({
@@ -255,37 +314,42 @@ const ambIcon = L.divIcon({
   className:'', iconSize:[36,36], iconAnchor:[18,18]
 });
 
-L.marker([victimLat,victimLng],{icon:victimIcon}).addTo(aMap).bindPopup('Accident Scene').openPopup();
+L.marker([victimLat,victimLng],{icon:victimIcon}).addTo(aMap).bindPopup(`<b>Emergency Scene</b><br>${activeCase.incidentDescription}`).openPopup();
 const ambMarker = L.marker(AMB_BASE,{icon:ambIcon,zIndexOffset:1000}).addTo(aMap);
 
 /* ═══════════════════════════════════════════════
-   BROADCAST CHANNEL — sends to victim.html
+   CANONICAL BROADCAST (LifelineSync)
 ═══════════════════════════════════════════════ */
-const BC = new BroadcastChannel('lifeline_em');
-
-// Also listen for victim's extra description
-BC.onmessage = e => {
-  if (e.data.type === 'EXTRA_DESC') {
-    document.getElementById('victim-extra-panel').style.display = 'block';
-    document.getElementById('victim-extra-text').innerText = e.data.val;
-  }
-};
-window.addEventListener('storage', e => {
-  if (e.key === 'lifeline_em_msg' && e.newValue) {
-    try {
-      const msg = JSON.parse(e.newValue);
-      if (msg.type === 'EXTRA_DESC') {
-        document.getElementById('victim-extra-panel').style.display = 'block';
-        document.getElementById('victim-extra-text').innerText = msg.val;
-      }
-    } catch(_) {}
-  }
-});
-
 function broadcast(msg) {
-  BC.postMessage(msg);
-  // localStorage fallback for cross-tab (different windows)
-  localStorage.setItem('lifeline_em_msg', JSON.stringify({ ...msg, _ts: Date.now() }));
+  if (typeof window !== 'undefined' && window.LifelineSync) {
+    window.LifelineSync.send(msg.type, msg);
+  } else if ('BroadcastChannel' in window) {
+    const BC = new BroadcastChannel('lifeline_em');
+    BC.postMessage(msg);
+    localStorage.setItem('lifeline_em_msg', JSON.stringify({ ...msg, _ts: Date.now() }));
+  }
+}
+
+// Listen for victim's extra landmark description updates
+if (typeof window !== 'undefined' && window.LifelineSync) {
+  window.LifelineSync.subscribe((msg, type) => {
+    if (type === 'EXTRA_DESC' || msg.type === 'EXTRA_DESC') {
+      if (msg.sender !== 'DRIVER' && msg.val) {
+        const panel = document.getElementById('victim-extra-panel');
+        const text = document.getElementById('victim-extra-text');
+        if (panel) panel.style.display = 'block';
+        if (text) text.innerText = msg.val;
+      }
+    }
+  });
+} else if ('BroadcastChannel' in window) {
+  const BC = new BroadcastChannel('lifeline_em');
+  BC.onmessage = e => {
+    if (e.data.type === 'EXTRA_DESC' && e.data.val) {
+      document.getElementById('victim-extra-panel').style.display = 'block';
+      document.getElementById('victim-extra-text').innerText = e.data.val;
+    }
+  };
 }
 
 /* ═══════════════════════════════════════════════
@@ -454,6 +518,7 @@ const TICKS=90, TICK_MS=280;
 function startSceneJourney() {
   if(isJourneyActive||!scenePaths[selectedSceneRoute]) return;
   isJourneyActive=true;
+  if(window.innerWidth <= 860) toggleSidebar(false);
 
   document.getElementById('go-btn').innerText='⏳ Journey in Progress…';
   document.getElementById('tb-status').innerText='En Route to Scene';
@@ -681,6 +746,7 @@ function startHospJourney() {
   const routes=hospPaths[selectedHospId];
   if(!routes){ alert('Routes still loading…'); return; }
   isJourneyActive=true;
+  if(window.innerWidth <= 860) toggleSidebar(false);
 
   const path=routes[selectedHospRoute].coords;
   const hosp=HOSPITALS.find(h=>h.id===selectedHospId);

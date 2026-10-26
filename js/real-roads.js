@@ -125,35 +125,40 @@ const REAL_ROADS = {
   ]
 };
 
-// Real-time synchronization broadcast channel
+// Canonical Real-Time Sync Adapter (delegates to LifelineSync / lifeline_em)
 class EmergencySync {
   constructor() {
-    this.channel = new BroadcastChannel("lifeline_emergency_channel");
     this.listeners = [];
-
-    this.channel.onmessage = (event) => {
-      this.listeners.forEach(cb => cb(event.data));
-    };
-
-    // Also fallback to localStorage storage events for cross-tab sync
-    window.addEventListener("storage", (e) => {
-      if (e.key === "lifeline_sync_event" && e.newValue) {
-        try {
-          const data = JSON.parse(e.newValue);
-          this.listeners.forEach(cb => cb(data));
-        } catch (err) {}
-      }
-    });
+    if (typeof window !== 'undefined' && window.LifelineSync) {
+      window.LifelineSync.subscribe((msg, type) => {
+        this.listeners.forEach(cb => cb({ type: type || msg.type, payload: msg }));
+      });
+    } else if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        this.channel = new BroadcastChannel("lifeline_em");
+        this.channel.onmessage = (event) => {
+          this.listeners.forEach(cb => cb(event.data));
+        };
+      } catch (_) {}
+    }
   }
 
   send(type, payload) {
-    const msg = { type, payload, timestamp: Date.now() };
-    this.channel.postMessage(msg);
-    localStorage.setItem("lifeline_sync_event", JSON.stringify(msg));
+    if (typeof window !== 'undefined' && window.LifelineSync) {
+      window.LifelineSync.send(type, payload);
+    } else if (this.channel) {
+      const msg = { type, payload, timestamp: Date.now() };
+      this.channel.postMessage(msg);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem("lifeline_em_msg", JSON.stringify(msg));
+      }
+    }
   }
 
   on(callback) {
-    this.listeners.push(callback);
+    if (typeof callback === 'function') {
+      this.listeners.push(callback);
+    }
   }
 }
 

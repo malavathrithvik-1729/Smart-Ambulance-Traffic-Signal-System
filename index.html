@@ -9,8 +9,33 @@
   body {
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    height: 100vh; overflow: auto;
+    min-height: 100vh; min-height: 100dvh;
+    padding: 76px 14px 28px;
+    box-sizing: border-box;
+    overflow-y: auto;
     background: radial-gradient(ellipse at 50% 0%, #1a2e50 0%, #070c18 70%);
+  }
+
+  /* ── Sticky Top Nav ── */
+  .app-top-nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 56px; background: rgba(8, 15, 30, 0.94);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; z-index: 2000;
+  }
+  .nav-toggle-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(30, 41, 59, 0.9); color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 8px;
+    padding: 7px 12px; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all .2s;
+  }
+  .nav-toggle-btn:hover { background: rgba(56, 189, 248, 0.2); color: #fff; }
+  .nav-brand-title {
+    font-size: 15px; font-weight: 800; color: #fff;
+    display: flex; align-items: center; gap: 8px;
   }
 
   .logo-row {
@@ -98,15 +123,14 @@
   .enter-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
   .enter-btn:disabled { background: #1f2937; color: #4b5563; cursor: not-allowed; transform: none; box-shadow: none; }
 
-  /* ── Top right floating actions ── */
+  /* ── Top right actions in navbar ── */
   .top-action-bar {
-    position: fixed; top: 16px; right: 20px;
-    z-index: 2000; display: flex; align-items: center; gap: 8px;
-    flex-wrap: wrap; justify-content: flex-end; max-width: 90vw;
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap; justify-content: flex-end;
   }
   .top-btn {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 14px; border-radius: 9px; font-size: 12px; font-weight: 700;
+    padding: 7px 13px; border-radius: 8px; font-size: 12px; font-weight: 700;
     text-decoration: none; border: none; cursor: pointer;
     transition: all .2s ease; white-space: nowrap; line-height: 1;
   }
@@ -119,14 +143,53 @@
     background: linear-gradient(135deg, #059669, #10b981);
     color: #fff; box-shadow: 0 4px 14px rgba(16,185,129,.45);
   }
-  .btn-sub-pdf {
-    background: rgba(15, 23, 42, 0.85); color: #cbd5e1;
-    border: 1px solid rgba(255, 255, 255, 0.15); backdrop-filter: blur(4px);
-  }
-  .btn-sub-pdf:hover { background: rgba(30, 41, 59, 0.95); color: #fff; border-color: var(--blue); }
-  .btn-guide-modal {
-    background: rgba(30, 41, 59, 0.85); color: #38bdf8;
-    border: 1px solid rgba(56, 189, 248, 0.35); backdrop-filter: blur(4px);
+
+  /* ── Mobile responsiveness for index page ── */
+  @media (max-width: 640px) {
+    body {
+      padding: 68px 12px 24px;
+      justify-content: flex-start;
+    }
+    .nav-brand-title {
+      font-size: 13.5px;
+    }
+    .logo-row {
+      margin-top: 10px;
+    }
+    .logo-icon { font-size: 34px; }
+    .logo-text h1 { font-size: 22px; }
+    .logo-text p { font-size: 11.5px; }
+    .tagline {
+      font-size: 13px;
+      margin: 0 auto 20px;
+    }
+    .entry-card {
+      padding: 20px 16px 18px;
+      border-radius: 14px;
+    }
+    .loc-row {
+      flex-direction: column;
+      gap: 8px;
+    }
+    .loc-row .btn {
+      width: 100%;
+    }
+    .top-btn {
+      padding: 6px 9px;
+      font-size: 11px;
+    }
+    .arch-grid {
+      grid-template-columns: 1fr !important;
+    }
+    .how-modal-header {
+      padding: 16px 16px 12px !important;
+    }
+    .how-modal-header h2 {
+      font-size: 16px !important;
+    }
+    .how-modal-body {
+      padding: 16px !important;
+    }
   }
 
   /* ── Modal overlay ── */
@@ -221,19 +284,73 @@
     display: flex; justify-content: space-between; align-items: center;
   }
   .how-modal-footer span { font-size: 10.5px; color: #475569; }
-</style>
 </head>
 <body>
 
-<!-- ── Top-right floating action buttons ── -->
-<div class="top-action-bar">
-  <button class="top-btn btn-demo-pdf" onclick="openHowModal()" title="View Step-by-Step Demo &amp; Manual PDF">
-    💡 Demo Steps
-  </button>
-  <a href="project-details.html" target="_blank" class="top-btn btn-proj-details" title="Open Project Details (Problem, Solution &amp; Evidences)">
-    🔬 Project Details
-  </a>
-</div>
+<!-- ── Backdrop for Left Nav Sidebar ── -->
+<div class="sidebar-backdrop" id="nav-backdrop" onclick="toggleNavDrawer(false)"></div>
+
+<!-- ── Left Navigation Sidebar Drawer ── -->
+<aside class="nav-drawer" id="nav-drawer">
+  <div class="nav-drawer-header">
+    <div class="nav-drawer-brand">
+      <span style="font-size:26px;">🚑</span>
+      <div>
+        <b style="font-size:15px;color:#fff;display:block;">Team Lifeline</b>
+        <span style="font-size:11px;color:var(--green);">Smart Ambulance System</span>
+      </div>
+    </div>
+    <button class="sidebar-close-btn" onclick="toggleNavDrawer(false)" title="Close Navigation" style="display:flex;">✕</button>
+  </div>
+  <div class="nav-drawer-links">
+    <a href="index.html" class="nav-drawer-link active">
+      <span class="nav-icon">🚨</span> <span>Report Emergency</span>
+    </a>
+    <a href="ambulance.html" class="nav-drawer-link">
+      <span class="nav-icon">🚑</span> <span>Ambulance Driver Portal</span>
+    </a>
+    <a href="victim.html" class="nav-drawer-link">
+      <span class="nav-icon">📱</span> <span>Victim &amp; Patient Portal</span>
+    </a>
+    <a href="emergency.html" class="nav-drawer-link">
+      <span class="nav-icon">⚡</span> <span>Dual Split Simulation</span>
+    </a>
+    <a href="patient.html" class="nav-drawer-link" title="Legacy compatibility link — redirects to canonical portal">
+      <span class="nav-icon">🏥</span> <span>Patient Portal (Legacy)</span>
+    </a>
+    <a href="project-details.html" class="nav-drawer-link">
+      <span class="nav-icon">🔬</span> <span>Project Details &amp; Proofs</span>
+    </a>
+    <a href="javascript:void(0)" onclick="toggleNavDrawer(false); openHowModal();" class="nav-drawer-link">
+      <span class="nav-icon">💡</span> <span>How to Test / Demo Steps</span>
+    </a>
+    <a href="manual.pdf" target="_blank" class="nav-drawer-link">
+      <span class="nav-icon">📄</span> <span>Open Manual PDF ↗</span>
+    </a>
+  </div>
+  <div class="nav-drawer-footer">
+    <b>SPR High School, Kamareddy</b><br>
+    State Level Science Fair Prototype &bull; v1.0
+  </div>
+</aside>
+
+<!-- ── Responsive Top Navigation Bar ── -->
+<header class="app-top-nav">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button class="nav-toggle-btn" onclick="toggleNavDrawer()" aria-label="Open Navigation Sidebar">
+      <span>☰</span> <span>Menu</span>
+    </button>
+    <div class="nav-brand-title">🚑 Team Lifeline</div>
+  </div>
+  <div class="top-action-bar">
+    <button class="top-btn btn-demo-pdf" onclick="openHowModal()" title="View Step-by-Step Demo &amp; Manual PDF">
+      💡 Demo Steps
+    </button>
+    <a href="project-details.html" target="_blank" class="top-btn btn-proj-details" title="Open Project Details (Problem, Solution &amp; Evidences)">
+      🔬 Details
+    </a>
+  </div>
+</header>
 
 <!-- ── How to Use Modal ── -->
 <div class="how-modal-overlay" id="how-modal-overlay" onclick="handleOverlayClick(event,'how-modal-overlay')">
@@ -378,13 +495,29 @@
 </div>
 
 <script>
+  function toggleNavDrawer(forceState) {
+    const drawer = document.getElementById('nav-drawer');
+    const backdrop = document.getElementById('nav-backdrop');
+    const isOpen = forceState !== undefined ? forceState : !drawer.classList.contains('open');
+    if (isOpen) {
+      drawer.classList.add('open');
+      if (backdrop) backdrop.classList.add('active');
+    } else {
+      drawer.classList.remove('open');
+      if (backdrop) backdrop.classList.remove('active');
+    }
+  }
+
   function openHowModal()  { document.getElementById('how-modal-overlay').classList.add('open'); document.body.style.overflow='hidden'; }
   function closeHowModal() { document.getElementById('how-modal-overlay').classList.remove('open'); document.body.style.overflow=''; }
   function handleOverlayClick(e, overlayId) {
     if (e.target.id === overlayId) closeHowModal();
   }
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeHowModal();
+    if (e.key === 'Escape') {
+      closeHowModal();
+      toggleNavDrawer(false);
+    }
   });
 </script>
 
@@ -454,6 +587,7 @@
 </div>
 
 <!-- Leaf JS not needed on landing page -->
+<script src="js/shared-state.js"></script>
 <script>
   let userLat = null;
   let userLng = null;
@@ -572,9 +706,20 @@
   /* ── Enter Emergency ── */
   function enterEmergency() {
     const desc = document.getElementById('desc-input').value.trim();
-    // Store in localStorage so BOTH victim and ambulance pages can read it
-    const data = { desc, lat: userLat, lng: userLng, ts: Date.now() };
-    localStorage.setItem('lifeline_em_case', JSON.stringify(data));
+    if (typeof window !== 'undefined' && window.EmergencyStateManager && typeof window.EmergencyStateManager.createCase === 'function') {
+      window.EmergencyStateManager.createCase({
+        incidentDescription: desc,
+        latitude: userLat,
+        longitude: userLng,
+        incidentLocation: userLat === 18.3312 ? 'NH-44 Highway Bypass, Kamareddy' : 'Reported GPS Location'
+      });
+    } else {
+      const data = { desc, lat: userLat, lng: userLng, ts: Date.now() };
+      localStorage.setItem('lifeline_em_case', JSON.stringify(data));
+      sessionStorage.setItem('em_desc', desc);
+      sessionStorage.setItem('em_lat', String(userLat));
+      sessionStorage.setItem('em_lng', String(userLng));
+    }
     window.location.href = 'victim.html';
   }
 </script>
