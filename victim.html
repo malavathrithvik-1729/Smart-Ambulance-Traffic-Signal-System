@@ -457,6 +457,10 @@ function handleMsg(msg) {
     }
 
     case 'POSITION': {
+      const waitBox = document.getElementById('waiting-state');
+      const jourBox = document.getElementById('journey-state');
+      if (waitBox) waitBox.style.display = 'none';
+      if (jourBox) jourBox.style.display = 'block';
       if (Array.isArray(msg.pos) && msg.pos.length === 2) {
         const [lat, lng] = msg.pos;
         ambMarker.setLatLng([lat, lng]);
