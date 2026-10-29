@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Local databases & storage
+data/
+storage/
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Untracked project files & experiments
+phone_compass_client.html
+satss_esp_code/
+traffic-signal-dashboard .html
+
+# Logs & System
+*.log
+.DS_Store
+Thumbs.db
